@@ -2,6 +2,6 @@
 
 ## Development
 ```
-mkvirtualenv -a $(pwd) python-code-synthesis -p python3
-`pip install -r requirements.txt
+mkvirtualenv -a $(pwd) $(basename $(pwd)) -p python3
+pip install -r requirements.txt
 ```
