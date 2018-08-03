@@ -1,4 +1,4 @@
-from kanren import eq, vars, conde, goalify, isvar
+from kanren import eq, vars, conde, goalify, isvar, var, run
 from kanren.core import EarlyGoalError
 import ast
 
@@ -6,9 +6,23 @@ typeo = goalify(type)
 
 
 def eq_obj(x, y):
-    """ x > y """
+    """ obj_x == obj_y """
     if not isvar(x) and not isvar(y):
-        return eq(x.__dict__, y.__dict__)
+        return conde(
+            (eq, x.__dict__, y.__dict__),
+            (eq, x, y)
+        )
+    else:
+        raise EarlyGoalError()
+
+
+def children_typeo(l, t):
+    """ type(x[n]) == t """
+    if not isvar(l) and not isvar(t):
+        eqs = []
+        for c in l:
+            eqs.append(typeo(c, t))
+        return eqs
     else:
         raise EarlyGoalError()
 
@@ -22,4 +36,9 @@ def eval_expro(expr, env, value):
     return conde(
         ((eq_obj, expr, ast.Num(n=value)),  # Numbers
          (typeo, value, int)),
+        ((eq_obj, expr, ast.Module(body=x)),  # Module
+         (typeo, x, list),),
+         #everyg(eval_expro, [(e, env, value) for e in x])),
+        ((eq_obj, expr, ast.Expr(value=value)),),
+        #((eq, expr, value),),
     )
