@@ -14,6 +14,7 @@ args = parser.parse_args()
 def interp(expr):
     print("Program to be evaluated:\n{}".format(expr))
     program_ast = ast.parse(expr)
+    program_ast = ast.Num(n=1)
     print("AST of the program: \n{}".format(ast.dump(program_ast)))
     x = var()
     evaluated_program = run(0, x, evalo(program_ast, x))
