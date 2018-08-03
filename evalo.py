@@ -1,8 +1,10 @@
-from kanren import unify, run, eq, vars, conde, goalify, lany, isvar
+from kanren import eq, vars, conde, goalify, isvar
 from kanren.core import EarlyGoalError
 import ast
 
 typeo = goalify(type)
+
+
 def eq_obj(x, y):
     """ x > y """
     if not isvar(x) and not isvar(y):
@@ -20,5 +22,4 @@ def eval_expro(expr, env, value):
     return conde(
         ((eq_obj, expr, ast.Num(n=value)),  # Numbers
          (typeo, value, int)),
-        #(eq, expr, value),  # Not implemented yet
     )
