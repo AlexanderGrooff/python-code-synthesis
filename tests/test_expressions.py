@@ -2,7 +2,7 @@ import ast
 from unittest import TestCase
 from kanren import var, run
 
-from evalo import evalo
+from evalo.evalo import evalo
 
 
 class TestExpressions(TestCase):
@@ -17,4 +17,5 @@ class TestExpressions(TestCase):
 
     def test_number_value_results_in_ast_number(self):
         ret = self.run_expr(var(), 1, eval_expr=True)
-        self.assertEqual(ret[0], ast.Num(n=1))
+        self.assertIsInstance(ret[0], ast.Num)
+        self.assertEqual(vars(ret[0]), {'n': 1})
