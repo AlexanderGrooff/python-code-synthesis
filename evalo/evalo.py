@@ -1,5 +1,6 @@
+from uuid import uuid4
 from kanren import eq, vars, conde, goalify, isvar, var, run, unifiable
-from kanren.core import EarlyGoalError
+from kanren.core import EarlyGoalError, lallfirst, success, fail
 from unification.more import unify_object
 import ast
 
@@ -17,38 +18,10 @@ def eq_obj(x, y):
         raise EarlyGoalError()
 
 
-def eq_objo(u, v):
-    """ Goal such that u == v
-    See also:
-        unify_object
-    """
-
-    def goal_eq(s):
-        result = unify_object(u, v, s)
-        if result is not False:
-            yield result
-
-    return goal_eq
-
-
-def children_typeo(l, t):
-    """ type(x[n]) == t """
-    if not isvar(l) and not isvar(t):
-        eqs = []
-        for c in l:
-            eqs.append(typeo(c, t))
-        return eqs
-    else:
-        raise EarlyGoalError()
-
-
-def _reify_object_dict(o, s):
-    obj = object.__new__(type(o))
-    d = reify(o.__dict__, s)
-    if d == o.__dict__:
-        return o
-    obj.__dict__.update(d)
-    return obj
+def check_if_duplicate_call(call_args_1, call_args_2):
+    if call_args_1 == call_args_2:
+        print('Found unending recursive call with args {}'.format(call_args_1))
+        return True
 
 
 def evalo(expr, value):
@@ -56,15 +29,17 @@ def evalo(expr, value):
     return eval_expro(expr, [], value)
 
 
-def eval_expro(expr, env, value):
-    x, y = vars(2)
+def eval_expro(expr, env, value, previous_args=None):
+    duplicate = check_if_duplicate_call((expr, env, value), previous_args)
+    if duplicate:
+        return (eq, 1, 1)
+
+    v1 = var('v1')
+    print('Evaluating {} to {} with env {}'.format(expr, value, env))
     return conde(
+        ((eq_obj, expr, ast.Expr(value=v1)),  # Expressions
+         eval_expro(v1, env, value, (expr, env, value))),
         ((eq, expr, ast.Num(n=value)),  # Numbers
          (typeo, value, int),
          (typeo, expr, ast.Num)),
-        ((eq_obj, expr, ast.Module(body=x)),  # Module
-         (typeo, x, list),),
-         #everyg(eval_expro, [(e, env, value) for e in x])),
-        ((eq_obj, expr, ast.Expr(value=value)),),
-        #((eq, expr, value),),
     )
