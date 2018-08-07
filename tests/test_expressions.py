@@ -23,3 +23,7 @@ class TestExpressions(TestCase):
     def test_ast_addition_results_in_var_integer(self):
         ret = self.run_expr(ast.Expr(value=ast.BinOp(left=ast.Num(n=1), op=ast.Add(), right=ast.Num(n=1))), var())
         self.assertEqual(ret[0], 2)
+
+    def test_addition_results_in_ast_binop(self):
+        ret = self.run_expr(var(), '1+1', eval_expr=True)
+        self.assertEqual(len(ret), 2)
