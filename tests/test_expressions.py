@@ -8,7 +8,7 @@ from evalo.evalo import evalo
 class TestExpressions(TestCase):
     def run_expr(self, expr, value, eval_expr=False):
         results = run(0, expr if eval_expr else value, evalo(expr, value))
-        print('Evaluated results: {}'.format(results))
+        print('Evaluated results: {}'.format([ast.dump(x) if isinstance(x, ast.AST) else x for x in results]))
         return results
 
     def test_number_ast_results_in_var_integer(self):

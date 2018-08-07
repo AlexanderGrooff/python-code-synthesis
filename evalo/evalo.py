@@ -32,12 +32,12 @@ def evalo(expr, value):
 def eval_expro(expr, env, value, previous_args=None):
     duplicate = check_if_duplicate_call((expr, env, value), previous_args)
     if duplicate:
-        return (eq, 1, 1)
+        return fail
 
     v1 = var('v1')
     print('Evaluating {} to {} with env {}'.format(expr, value, env))
     return conde(
-        ((eq_obj, expr, ast.Expr(value=v1)),  # Expressions
+        ((eq, expr, ast.Expr(value=v1)),  # Expressions
          eval_expro(v1, env, value, (expr, env, value))),
         ((eq, expr, ast.Num(n=value)),  # Numbers
          (typeo, value, int),
