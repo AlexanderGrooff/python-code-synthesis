@@ -17,8 +17,10 @@ class TestExpressions(TestCase):
 
     def test_number_value_results_in_ast_number(self):
         ret = self.run_expr(var(), 1, eval_expr=True)
-        self.assertIsInstance(ret[0], ast.Num)
-        self.assertEqual(vars(ret[0]), {'n': 1})
+        self.assertIsInstance(ret[0], ast.Expr)
+        self.assertIsInstance(ret[1], ast.Num)
+        self.assertIsInstance(vars(ret[0])['value'], ast.Num)
+        self.assertEqual(vars(ret[1]), {'n': 1})
 
     def test_expression_is_evaluated_to_value(self):
         ret = self.run_expr(ast.Expr(value=ast.Num(n=1)), var('expected_var'))

@@ -7,17 +7,6 @@ import ast
 typeo = goalify(type)
 
 
-def eq_obj(x, y):
-    """ obj_x == obj_y """
-    if not isvar(x) and not isvar(y):
-        return conde(
-            (eq, x.__dict__, y.__dict__),
-            (eq, x, y)
-        )
-    else:
-        raise EarlyGoalError()
-
-
 def check_if_duplicate_call(call_args_1, call_args_2):
     if call_args_1 == call_args_2:
         print('Found unending recursive call with args {}'.format(call_args_1))
