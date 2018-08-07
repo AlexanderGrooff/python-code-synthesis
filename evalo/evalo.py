@@ -61,7 +61,7 @@ def eval_expro(expr, env, value, previous_args=None):
         ((eq, expr, ast.Num(n=value)),),  # Numbers
         ((eq, expr, ast.BinOp(left=v1, op=op, right=v2)),  # Expressions
          (add, e1, e2, value),
-         (eq, op, env, ast.Add()),
+         (eq, op, ast.Add()),
          (eval_expro, v1, env, e1, current_args),
          (eval_expro, v2, env, e2, current_args)),
     )
