@@ -8,9 +8,23 @@ import ast
 typeo = goalify(type)
 
 
-def check_if_duplicate_call(call_args_1, call_args_2):
-    if call_args_1 == call_args_2:
-        print('Found unending recursive call with args {}'.format(call_args_1))
+goal_stack = {}
+
+
+def args_to_hash(f, args):
+    return str(hash(str(f) + str(args)))
+
+
+def eval_to_stack(f, args):
+    h = args_to_hash(f, args)
+    current_stack = goal_stack.get(h, [])
+    # If a call is already on the stack, that means there is a duplicate
+    if current_stack:
+        print('Found double call to {} with args {}'.format(str(f), args))
+        goal_stack[h] = []
+        return False
+    else:
+        goal_stack[h] = args
         return True
 
 
@@ -22,8 +36,7 @@ def evalo(program, value):
 def eval_programo(program, env, value, previous_args=None):
     print('Evaluating program {} to {} with env {}'.format(program, value, env))
     current_args = (program, env, value)
-    duplicate = check_if_duplicate_call(current_args, previous_args)
-    if duplicate:
+    if not eval_to_stack(eval_programo, current_args):
         return fail
 
     return conde(
@@ -33,10 +46,9 @@ def eval_programo(program, env, value, previous_args=None):
 
 def eval_stmto(stmt, env, value, previous_args=None):
     print('Evaluating stmt {} to {} with env {}'.format(stmt, value, env))
-    current_args = (stmt, env, value)
-    duplicate = check_if_duplicate_call(current_args, previous_args)
-    if duplicate:
-        return fail
+    #current_args = (stmt, env, value)
+    #if not eval_to_stack(eval_stmto, current_args):
+    #    return fail
 
     exprbody = var('exprbody')
     return conde(
@@ -48,8 +60,7 @@ def eval_stmto(stmt, env, value, previous_args=None):
 def eval_expro(expr, env, value, previous_args=None):
     print('Evaluating expr {} to {} with env {}'.format(expr, value, env))
     current_args = (expr, env, value)
-    duplicate = check_if_duplicate_call(current_args, previous_args)
-    if duplicate:
+    if not eval_to_stack(eval_expro, current_args):
         return fail
 
     op = var('op')
@@ -58,7 +69,8 @@ def eval_expro(expr, env, value, previous_args=None):
     e1 = var('e1')
     e2 = var('e2')
     return conde(
-        ((eq, expr, ast.Num(n=value)),),  # Numbers
+        ((eq, expr, ast.Num(n=value)),
+         (typeo, value, int)),  # Numbers
         ((eq, expr, ast.BinOp(left=v1, op=op, right=v2)),  # Expressions
          (add, e1, e2, value),
          (eq, op, ast.Add()),
