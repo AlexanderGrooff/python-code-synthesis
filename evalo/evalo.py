@@ -62,28 +62,22 @@ def eval_stmto(stmt, env, value, previous_args=None):
 
 def eval_expro(expr, env, value, previous_args=None):
     print('Evaluating expr {} to {} with env {}'.format(expr, value, env))
-    current_args = (expr, env, value)
-    #if not eval_to_stack(eval_expro, current_args):
-    if previous_args == current_args:
-        print('Failing on {}'.format(current_args))
-        return fail
 
     op = var('op')
     v1 = var('v1')
     v2 = var('v2')
     e1 = var('e1')
     e2 = var('e2')
-    for y in current_args:
-        if isinstance(y, ast.AST):
-            print('Found AST value -> {}'.format(ast.dump(y)))
+    if isinstance(expr, ast.AST):
+        print('Found AST for expr -> {}'.format(ast.dump(expr)))
+    if isinstance(value, ast.AST):
+        print('Found AST for value -> {}'.format(ast.dump(value)))
     return conde(
         ((eq, expr, ast.Num(n=value)),
          (membero, value, [0,1,2])),
         ((eq, expr, ast.BinOp(left=e1, op=op, right=e2)),  # Expressions
          (eq, op, ast.Add()),
-         (eval_expro, e1, env, v1, current_args),
-         (eval_expro, e2, env, v2, current_args),
-         (typeo, v1, int),
-         (typeo, v2, int),
+         (eval_expro, e1, env, v1, None),
+         (eval_expro, e2, env, v2, None),
          (add, v1, v2, value)),
     )
