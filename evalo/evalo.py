@@ -73,15 +73,17 @@ def eval_expro(expr, env, value, previous_args=None):
     v2 = var('v2')
     e1 = var('e1')
     e2 = var('e2')
-    if isinstance(expr, ast.AST):
-        print('Expr -> {}'.format(ast.dump(expr)))
-    return (lany,
-        (lall, (eq, expr, ast.Num(n=value)),
-         (membero, value, [0,1,2]),
-         (typeo, value, int)),  # Numbers
-        (lall, (eq, expr, ast.BinOp(left=e1, op=op, right=e2)),  # Expressions
+    for y in current_args:
+        if isinstance(y, ast.AST):
+            print('Found AST value -> {}'.format(ast.dump(y)))
+    return conde(
+        ((eq, expr, ast.Num(n=value)),
+         (membero, value, [0,1,2])),
+        ((eq, expr, ast.BinOp(left=e1, op=op, right=e2)),  # Expressions
          (eq, op, ast.Add()),
          (eval_expro, e1, env, v1, current_args),
-         (eval_expro, e2, env, v2, None),
+         (eval_expro, e2, env, v2, current_args),
+         (typeo, v1, int),
+         (typeo, v2, int),
          (add, v1, v2, value)),
     )
