@@ -11,16 +11,23 @@ def reify_ast(s):
     for s_dict in s:
         for k,v in s_dict.items():
             s_without_k = deepcopy(s_dict)
-            del s_without_k[k]
-            print('Reifying {}:{} with {}'.format(k, v, s_without_k))
+            #del s_without_k[k]
+            print('Reifying {}:{} with {}'.format(k, ast_dump_if_possible(v),
+                  ast_dump_substitute(s_without_k)))
             try:
-                o = reify_object(v, s_without_k)
+                v = reify_object(v, s_without_k)
+                print('Reified object {}'.format(k))
             except AttributeError:
-                o = reify(v, s_without_k)
-            objects.append(o)
-    return [ast_dump_if_possible(o) for o in objects]
+                v = reify(v, s_without_k)
+            s_dict[k] = v
+            print('Reified {} to {}'.format(k, ast_dump_if_possible(v),
+                  s_without_k))
+    return s
 
 def ast_dump_if_possible(a):
     if isinstance(a, ast.AST):
         return ast.dump(a)
     return a
+
+def ast_dump_substitute(s):
+    return {k: ast_dump_if_possible(v) for k,v in s.items()}
