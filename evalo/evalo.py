@@ -60,24 +60,24 @@ def eval_stmto(stmt, env, value, previous_args=None):
     )
 
 
-def eval_expro(expr, env, value, previous_args=None):
+def eval_expro(expr, env, value):
     print('Evaluating expr {} to {} with env {}'.format(expr, value, env))
 
-    op = var('op')
-    v1 = var('v1')
-    v2 = var('v2')
-    e1 = var('e1')
-    e2 = var('e2')
+    op = var()
+    v1 = var()
+    v2 = var()
+    e1 = var()
+    e2 = var()
     if isinstance(expr, ast.AST):
         print('Found AST for expr -> {}'.format(ast.dump(expr)))
     if isinstance(value, ast.AST):
         print('Found AST for value -> {}'.format(ast.dump(value)))
     return conde(
         ((eq, expr, ast.Num(n=value)),
-         (membero, value, [0,1,2])),
-        ((eq, expr, ast.BinOp(left=e1, op=op, right=e2)),  # Expressions
+         (membero, value, range(100))),
+        ((eq, expr, ast.BinOp(left=e1, op=op, right=e2)),
          (eq, op, ast.Add()),
-         (eval_expro, e1, env, v1, None),
-         (eval_expro, e2, env, v2, None),
+         (eval_expro, e1, env, v1),
+         (eval_expro, e2, env, v2),
          (add, v1, v2, value)),
     )
