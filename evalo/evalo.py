@@ -1,7 +1,7 @@
 from uuid import uuid4
 from kanren import eq, vars, conde, goalify, isvar, var, run, unifiable, lany, \
     lall, membero
-from kanren.arith import add
+from kanren.arith import add, sub, mul, div, mod
 from kanren.core import EarlyGoalError, success, fail
 from unification.more import unify_object
 import ast
@@ -64,6 +64,7 @@ def eval_expro(expr, env, value):
     print('Evaluating expr {} to {} with env {}'.format(expr, value, env))
 
     op = var()
+    op_v = var()
     v1 = var()
     v2 = var()
     e1 = var()
@@ -74,10 +75,28 @@ def eval_expro(expr, env, value):
         print('Found AST for value -> {}'.format(ast.dump(value)))
     return conde(
         ((eq, expr, ast.Num(n=value)),
+         #(typeo, value, int)),
          (membero, value, range(100))),
         ((eq, expr, ast.BinOp(left=e1, op=op, right=e2)),
-         (eq, op, ast.Add()),
+         (eval_opo, op, env, op_v),
          (eval_expro, e1, env, v1),
          (eval_expro, e2, env, v2),
-         (add, v1, v2, value)),
+         (op_v, v1, v2, value)),
+    )
+
+
+def eval_opo(op, env, value):
+    print('Evaluating operator {} to {} with env {}'.format(op, value, env))
+
+    return conde(
+        ((eq, op, ast.Add()),
+         (eq, value, add)),
+        ((eq, op, ast.Sub()),
+         (eq, value, sub)),
+        ((eq, op, ast.Mult()),
+         (eq, value, mul)),
+        #((eq, op, ast.Div()),  # Float is not yet supported
+        # (eq, value, div)),
+        ((eq, op, ast.Mod()),
+         (eq, value, mod)),
     )

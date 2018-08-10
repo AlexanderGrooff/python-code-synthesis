@@ -24,3 +24,20 @@ class TestExpressions(TestCase):
     def test_ast_addition_results_in_var_integer(self):
         ret = self.run_expr(ast.Expr(value=ast.BinOp(left=ast.Num(n=1), op=ast.Add(), right=ast.Num(n=1))), var())
         self.assertEqual(ret[0], 2)
+
+    def test_ast_subtraction_results_in_var_integer(self):
+        ret = self.run_expr(ast.Expr(value=ast.BinOp(left=ast.Num(n=1), op=ast.Sub(), right=ast.Num(n=1))), var())
+        self.assertEqual(ret[0], 0)
+
+    def test_ast_multiplication_results_in_var_integer(self):
+        ret = self.run_expr(ast.Expr(value=ast.BinOp(left=ast.Num(n=2), op=ast.Mult(), right=ast.Num(n=1))), var())
+        self.assertEqual(ret[0], 2)
+
+    # Float is not yet supported
+    #def test_ast_division_results_in_var_integer(self):
+    #    ret = self.run_expr(ast.Expr(value=ast.BinOp(left=ast.Num(n=2), op=ast.Div(), right=ast.Num(n=1))), var())
+    #    self.assertEqual(ret[0], 1)
+
+    def test_ast_modulo_results_in_var_integer(self):
+        ret = self.run_expr(ast.Expr(value=ast.BinOp(left=ast.Num(n=5), op=ast.Mod(), right=ast.Num(n=2))), var())
+        self.assertEqual(ret[0], 1)
