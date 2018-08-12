@@ -3,6 +3,7 @@ from kanren import eq, vars, conde, goalify, isvar, var, run, unifiable, lany, \
     lall, membero
 from kanren.arith import add, sub, mul, div, mod
 from kanren.core import EarlyGoalError, success, fail
+from kanren.goals import heado, tailo, appendo
 from unification.more import unify_object
 import ast
 
@@ -69,11 +70,18 @@ def eval_expro(expr, env, value):
     v2 = var()
     e1 = var()
     e2 = var()
+    name = var()
     if isinstance(expr, ast.AST):
         print('Found AST for expr -> {}'.format(ast.dump(expr)))
     if isinstance(value, ast.AST):
         print('Found AST for value -> {}'.format(ast.dump(value)))
     return conde(
+        ((eq, expr, ast.Name(id=name, ctx=ast.Load())),
+         (typeo, name, str),
+         (lookupo, name, env, value)),
+        ((eq, expr, ast.Str(s=e1)),
+         (typeo, value, str),
+         (eq, e1, value)),
         ((eq, expr, ast.Num(n=value)),
          #(typeo, value, int)),
          (membero, value, range(100))),
@@ -82,6 +90,23 @@ def eval_expro(expr, env, value):
          (eval_expro, e1, env, v1),
          (eval_expro, e2, env, v2),
          (op_v, v1, v2, value)),
+    )
+
+
+def lookupo(name, env, t):
+    print('Looking up {} for {} in env {}'.format(name, t, env))
+
+    head = var()
+    rest = var()
+    key = var()
+    val = var()
+    return conde(
+        ((heado, head, env),
+         (heado, name, head),
+         (tailo, rest, head),
+         (heado, t, rest)),
+        ((tailo, rest, env),
+         (lookupo, name, rest, t))
     )
 
 
