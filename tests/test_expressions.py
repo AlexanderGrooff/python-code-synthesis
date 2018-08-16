@@ -2,12 +2,12 @@ import ast
 from unittest import TestCase
 from kanren import var, run
 
-from evalo.evalo import evalo
+from evalo.evalo import eval_stmto
 
 
 class TestExpressions(TestCase):
-    def run_expr(self, expr, value, eval_expr=False):
-        results = run(2, expr if eval_expr else value, evalo(expr, value))
+    def run_expr(self, expr, value, eval_expr=False, env=list()):
+        results = run(2, expr if eval_expr else value, eval_stmto(expr, env, value))
         print('Evaluated results: {}'.format([ast.dump(x) if isinstance(x, ast.AST) else x for x in results]))
         return results
 
@@ -40,4 +40,8 @@ class TestExpressions(TestCase):
 
     def test_ast_modulo_results_in_var_integer(self):
         ret = self.run_expr(ast.Expr(value=ast.BinOp(left=ast.Num(n=5), op=ast.Mod(), right=ast.Num(n=2))), var())
+        self.assertEqual(ret[0], 1)
+
+    def test_ast_name_results_in_lookup_from_env(self):
+        ret = self.run_expr(ast.Expr(value=ast.Name(id='x', ctx=ast.Load())), var(), env=[['x', 1]])
         self.assertEqual(ret[0], 1)

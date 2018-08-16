@@ -8,9 +8,9 @@ from unification.more import unify_object
 import ast
 
 typeo = goalify(type)
-
-
 goal_stack = {}
+
+unifiable(ast.AST)
 
 
 def args_to_hash(f, args):
