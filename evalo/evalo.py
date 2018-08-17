@@ -75,7 +75,7 @@ def eval_expro(expr, env, value):
         print('Found AST for expr -> {}'.format(ast.dump(expr)))
     if isinstance(value, ast.AST):
         print('Found AST for value -> {}'.format(ast.dump(value)))
-    return conde(
+    return (conde,
         ((eq, expr, ast.Name(id=name, ctx=ast.Load())),
          (typeo, name, str),
          (lookupo, name, env, value)),
@@ -83,7 +83,7 @@ def eval_expro(expr, env, value):
          (typeo, value, str),
          (eq, e1, value)),
         ((eq, expr, ast.Num(n=value)),
-         #(typeo, value, int)),
+         (typeo, value, int),
          (membero, value, range(100))),
         ((eq, expr, ast.BinOp(left=e1, op=op, right=e2)),
          (eval_opo, op, env, op_v),
@@ -94,13 +94,11 @@ def eval_expro(expr, env, value):
 
 
 def lookupo(name, env, t):
-    print('Looking up {} for {} in env {}'.format(name, t, env))
-
     head = var()
     rest = var()
     key = var()
     val = var()
-    return conde(
+    return (conde,
         ((heado, head, env),
          (heado, name, head),
          (tailo, rest, head),
@@ -113,7 +111,7 @@ def lookupo(name, env, t):
 def eval_opo(op, env, value):
     print('Evaluating operator {} to {} with env {}'.format(op, value, env))
 
-    return conde(
+    return (conde,
         ((eq, op, ast.Add()),
          (eq, value, add)),
         ((eq, op, ast.Sub()),
