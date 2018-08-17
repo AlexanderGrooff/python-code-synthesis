@@ -1,5 +1,6 @@
 import ast
 from unittest import TestCase
+from types import FunctionType
 from kanren import var, run
 
 from evalo.evalo import eval_expro
@@ -44,10 +45,19 @@ class TestExpressions(TestCase):
         ret = self.run_expr(ast.Str(s='Hello world!'), var())
         self.assertEqual(ret[0], 'Hello world!')
 
-    #def test_string_value_results_in_ast_string(self):
-    #    ret = self.run_expr(var(), 'Hello world!', eval_expr=True)
-    #    self.assertEqual(ret[0], ast.Str(s='Hello world!'))
+    def test_string_value_results_in_ast_string(self):
+        ret = self.run_expr(var(), 'Hello world!', eval_expr=True)
+        self.assertIsInstance(ret[0], ast.Str)
+        self.assertEqual(ret[0].s, 'Hello world!')
 
     def test_ast_name_results_in_lookup_from_env(self):
         ret = self.run_expr(ast.Name(id='x', ctx=ast.Load()), var(), env=[['x', 1]])
+        self.assertEqual(ret[0], 1)
+
+    def test_ast_lambda_without_args_results_in_function_type(self):
+        ret = self.run_expr(ast.Lambda(args=[], body=ast.Num(n=1)), var(), env=[])
+        self.assertEqual(type(ret[0]), FunctionType)
+
+    def test_ast_call_with_lambda_results_in_function_call(self):
+        ret = self.run_expr(ast.Call(func=ast.Lambda(args=[], body=ast.Num(n=1)), args=[], keywords=[]), var(), env=[])
         self.assertEqual(ret[0], 1)

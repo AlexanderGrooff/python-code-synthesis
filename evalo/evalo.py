@@ -1,3 +1,4 @@
+from types import FunctionType
 from uuid import uuid4
 from kanren import eq, vars, conde, goalify, isvar, var, run, unifiable, lany, \
     lall, membero
@@ -11,6 +12,12 @@ typeo = goalify(type)
 goal_stack = {}
 
 unifiable(ast.AST)
+
+
+def callo(func, val):
+    if not isvar(func):
+        return (eq, func(), val)
+    raise EarlyGoalError()
 
 
 def args_to_hash(f, args):
@@ -64,32 +71,48 @@ def eval_stmto(stmt, env, value, previous_args=None):
 def eval_expro(expr, env, value):
     print('Evaluating expr {} to {} with env {}'.format(expr, value, env))
 
-    op = var()
-    op_v = var()
-    v1 = var()
-    v2 = var()
-    e1 = var()
-    e2 = var()
-    name = var()
+    uuid = str(uuid4())[:4]
+
+    op = var('op' + uuid)
+    op_v = var('op_v' + uuid)
+    v1 = var('v1' + uuid)
+    v2 = var('v2' + uuid)
+    e1 = var('e1' + uuid)
+    e2 = var('e2' + uuid)
+    name = var('name' + uuid)
+    body = var('body' + uuid)
+    body_v = var('body_v' + uuid)
+    args = var('args' + uuid)
+    args_v = var('args_v' + uuid)
+    func = var('func' + uuid)
+    func_v = var('func_v' + uuid)
+    kwargs = var('kwargs' + uuid)
+    kwargs_v = var('kwargs_v' + uuid)
+    str_e = var('str_e' + uuid)
     if isinstance(expr, ast.AST):
         print('Found AST for expr -> {}'.format(ast.dump(expr)))
     if isinstance(value, ast.AST):
         print('Found AST for value -> {}'.format(ast.dump(value)))
     return (conde,
         ((eq, expr, ast.Name(id=name, ctx=ast.Load())),
-         (typeo, name, str),
          (lookupo, name, env, value)),
-        ((eq, expr, ast.Str(s=e1)),
+        ((eq, expr, ast.Str(s=str_e)),
          (typeo, value, str),
-         (eq, e1, value)),
+         (eq, str_e, value)),
         ((eq, expr, ast.Num(n=value)),
-         (typeo, value, int),
          (membero, value, range(100))),
         ((eq, expr, ast.BinOp(left=e1, op=op, right=e2)),
          (eval_opo, op, env, op_v),
          (eval_expro, e1, env, v1),
          (eval_expro, e2, env, v2),
          (op_v, v1, v2, value)),
+        ((eq, expr, ast.Lambda(body=body, args=[])),
+         (typeo, value, FunctionType),
+         (eval_expro, body, env, body_v),
+         (eq, lambda: body_v, value)),
+        ((eq, expr, ast.Call(func=func, args=[], keywords=[])),
+         (eval_expro, func, env, func_v),
+         (callo, func_v, value))
     )
 
 
