@@ -70,7 +70,6 @@ def eval_stmto(stmt, env, value, previous_args=None):
 
 def eval_expro(expr, env, value):
     print('Evaluating expr {} to {} with env {}'.format(expr, value, env))
-
     uuid = str(uuid4())[:4]
 
     op = var('op' + uuid)
@@ -94,25 +93,25 @@ def eval_expro(expr, env, value):
     if isinstance(value, ast.AST):
         print('Found AST for value -> {}'.format(ast.dump(value)))
     return (conde,
-        ((eq, expr, ast.Name(id=name, ctx=ast.Load())),
-         (lookupo, name, env, value)),
-        ((eq, expr, ast.Str(s=str_e)),
-         (typeo, value, str),
-         (eq, str_e, value)),
+        #((eq, expr, ast.Name(id=name, ctx=ast.Load())),
+        # (lookupo, name, env, value)),
+        #((eq, expr, ast.Str(s=str_e)),
+        # (typeo, value, str),
+        # (eq, str_e, value)),
         ((eq, expr, ast.Num(n=value)),
          (membero, value, range(100))),
-        ((eq, expr, ast.BinOp(left=e1, op=op, right=e2)),
-         (eval_opo, op, env, op_v),
+        ((eq, expr, ast.BinOp(left=e1, op=ast.Add(), right=e2)),
+         #(eval_opo, op, env, op_v),
          (eval_expro, e1, env, v1),
          (eval_expro, e2, env, v2),
-         (op_v, v1, v2, value)),
-        ((eq, expr, ast.Lambda(body=body, args=[])),
-         (typeo, value, FunctionType),
-         (eval_expro, body, env, body_v),
-         (eq, lambda: body_v, value)),
-        ((eq, expr, ast.Call(func=func, args=[], keywords=[])),
-         (eval_expro, func, env, func_v),
-         (callo, func_v, value))
+         (add, v1, v2, value)),
+        #((eq, expr, ast.Lambda(body=body, args=[])),
+        # (typeo, value, FunctionType),
+        # (eval_expro, body, env, body_v),
+        # (eq, lambda: body_v, value)),
+        #((eq, expr, ast.Call(func=func, args=[], keywords=[])),
+        # (eval_expro, func, env, func_v),
+        # (callo, func_v, value))
     )
 
 
