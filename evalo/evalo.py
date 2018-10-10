@@ -1,12 +1,13 @@
 from types import FunctionType
 from uuid import uuid4
-from kanren import eq, vars, conde, goalify, isvar, var, run, unifiable, lany, \
+from kanren import eq, vars, goalify, isvar, var, run, unifiable, lany, \
     lall, membero
 from kanren.arith import add, sub, mul, div, mod
 from kanren.core import EarlyGoalError, success, fail
 from kanren.goals import heado, tailo, appendo
 from unification.more import unify_object
 import ast
+from evalo.solve import goaleval, safe_conde as conde
 
 typeo = goalify(type)
 goal_stack = {}
@@ -71,23 +72,6 @@ def eval_stmto(stmt, env, value, previous_args=None):
 def eval_expro(expr, env, value):
     print('Evaluating expr {} to {} with env {}'.format(expr, value, env))
     uuid = str(uuid4())[:4]
-
-    op = var('op' + uuid)
-    op_v = var('op_v' + uuid)
-    v1 = var('v1' + uuid)
-    v2 = var('v2' + uuid)
-    e1 = var('e1' + uuid)
-    e2 = var('e2' + uuid)
-    name = var('name' + uuid)
-    body = var('body' + uuid)
-    body_v = var('body_v' + uuid)
-    args = var('args' + uuid)
-    args_v = var('args_v' + uuid)
-    func = var('func' + uuid)
-    func_v = var('func_v' + uuid)
-    kwargs = var('kwargs' + uuid)
-    kwargs_v = var('kwargs_v' + uuid)
-    str_e = var('str_e' + uuid)
     if isinstance(expr, ast.AST):
         print('Found AST for expr -> {}'.format(ast.dump(expr)))
     if isinstance(value, ast.AST):
@@ -99,12 +83,8 @@ def eval_expro(expr, env, value):
         # (typeo, value, str),
         # (eq, str_e, value)),
         ((eq, expr, ast.Num(n=value)),
-         (membero, value, range(100))),
-        ((eq, expr, ast.BinOp(left=e1, op=ast.Add(), right=e2)),
-         #(eval_opo, op, env, op_v),
-         (eval_expro, e1, env, v1),
-         (eval_expro, e2, env, v2),
-         (add, v1, v2, value)),
+         (membero, value, range(5))),
+        eval_binop(expr, env, value),
         #((eq, expr, ast.Lambda(body=body, args=[])),
         # (typeo, value, FunctionType),
         # (eval_expro, body, env, body_v),
@@ -114,6 +94,23 @@ def eval_expro(expr, env, value):
         # (callo, func_v, value))
     )
 
+
+def eval_binop(binop, env, value):
+    print('Evaluating binop {} to {} with env {}'.format(binop, value, env))
+    uuid = str(uuid4())[:4]
+
+    v1 = var('v1' + uuid)
+    v2 = var('v2' + uuid)
+    e1 = var('e1' + uuid)
+    e2 = var('e2' + uuid)
+
+    return (
+        (eq, binop, ast.BinOp(left=e1, op=ast.Add(), right=e2)),
+        #(eval_opo, op, env, op_v),
+        (eval_expro, e1, env, v1),
+        (eval_expro, e2, env, v2),
+        (add, v1, v2, value)
+    )
 
 def lookupo(name, env, t):
     head = var()
