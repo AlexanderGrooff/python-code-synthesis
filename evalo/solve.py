@@ -134,19 +134,12 @@ def safe_lallgreedy(*goals):
     kanren.core.EarlyGoalError
     """
     hashed_goals = str(goals)
-    mem = {}
     if not goals:
         return success
     if len(goals) == 1:
         return goals[0]
 
     def allgoal(s):
-        if hashed_goals in mem.keys() and mem[hashed_goals] == s:
-            print("Already processed goals {} with substitute {}".format(goals, s))
-            return fail
-        else:
-            mem[hashed_goals] = s
-            print("Mem is now {}".format(mem))
         g = goaleval(reify(goals[0], s))
         return unique(
             interleave(goaleval(reify(
