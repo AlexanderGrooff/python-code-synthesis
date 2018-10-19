@@ -1,16 +1,19 @@
+import structlog
+import ast
 from types import FunctionType
 from uuid import uuid4
+
 from kanren import eq, vars, goalify, isvar, var, run, unifiable, lany, \
     lall, membero, conde
 from kanren.arith import add, sub, mul, div, mod
 from kanren.core import EarlyGoalError, success, fail
 from kanren.goals import heado, tailo, appendo
 from unification.more import unify_object
-import ast
-#from evalo.solve import goaleval, safe_conde as conde
 
+import evalo.logging
+
+logger = structlog.get_logger()
 typeo = goalify(type)
-goal_stack = {}
 
 unifiable(ast.AST)
 
@@ -21,46 +24,21 @@ def callo(func, val):
     raise EarlyGoalError()
 
 
-def args_to_hash(f, args):
-    return str(hash(str(f) + str(args)))
-
-
-def eval_to_stack(f, args):
-    if not args:
-        return True
-    h = args_to_hash(f, args)
-    current_stack = goal_stack.get(h, [])
-    # If a call is already on the stack, that means there is a duplicate
-    if current_stack:
-        print('Found double call to {} with args {}'.format(str(f), args))
-        goal_stack[h] = []
-        return False
-    else:
-        goal_stack[h] = args
-        return True
-
-
 def evalo(program, value):
     unifiable(ast.AST)
     return eval_programo(program, [], value)
 
 
-def eval_programo(program, env, value, previous_args=None):
-    print('Evaluating program {} to {} with env {}'.format(program, value, env))
-    current_args = (program, env, value)
-    if not eval_to_stack(eval_programo, current_args):
-        return fail
+def eval_programo(program, env, value):
+    logger.info('Evaluating program {} to {} with env {}'.format(program, value, env))
 
     return conde(
-        ((eval_stmto, program, env, value, previous_args),),  # Change this
+        ((eval_stmto, program, env, value),),  # Change this
     )
 
 
-def eval_stmto(stmt, env, value, previous_args=None):
-    print('Evaluating stmt {} to {} with env {}'.format(stmt, value, env))
-    #current_args = (stmt, env, value)
-    #if not eval_to_stack(eval_stmto, current_args):
-    #    return fail
+def eval_stmto(stmt, env, value):
+    logger.info('Evaluating stmt {} to {} with env {}'.format(stmt, value, env))
 
     exprbody = var('exprbody')
     return conde(
@@ -70,7 +48,7 @@ def eval_stmto(stmt, env, value, previous_args=None):
 
 
 def eval_expro(expr, env, value, depth=0, maxdepth=4):
-    print('Evaluating expr {} to {} with env {}'.format(expr, value, env))
+    logger.debug('Evaluating expr {} to {} with env {}'.format(expr, value, env))
     uuid = str(uuid4())[:4]
     v1 = var('v1' + uuid)
     v2 = var('v2' + uuid)
@@ -85,12 +63,12 @@ def eval_expro(expr, env, value, depth=0, maxdepth=4):
     func = var('func' + uuid)
     func_v = var('func_v' + uuid)
     if isinstance(expr, ast.AST):
-        print('Found AST for expr -> {}'.format(ast.dump(expr)))
+        logger.info('Found AST for expr -> {}'.format(ast.dump(expr)))
     if isinstance(value, ast.AST):
-        print('Found AST for value -> {}'.format(ast.dump(value)))
+        logger.info('Found AST for value -> {}'.format(ast.dump(value)))
 
     if depth == maxdepth:
-        print('Depth {} reached, which is the maximum depth'.format(depth))
+        logger.debug('Depth {} reached, which is the maximum depth'.format(depth))
         return fail
     return (conde,
         ((eq, expr, ast.Name(id=name, ctx=ast.Load())),
