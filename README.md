@@ -45,6 +45,23 @@ To translate this to human-readable values, we can use `ast_dump_if_possible`:
  'BinOp(left=BinOp(left=Num(n=0), op=Add(), right=Num(n=0)), op=Add(), right=Num(n=2))']
 ```
 
+Using the [astunparse](https://github.com/simonpercivall/astunparse) library we can directly translate this output to Python source code:
+
+```
+> [astunparse.unparse(y).strip() for y in run(10, x, eval_expro(x, [], 2, maxdepth=3))]
+
+['2',
+ '(0 + 2)',
+ '(0 - (0 - 2))',
+ '(1 * 2)',
+ '((0 + 0) + 2)',
+ '((0 + 0) - (0 - 2))',
+ '((1 + 0) * 2)',
+ '((0 - 0) + 2)',
+ '((0 - 0) - (0 - 2))',
+ '((1 - 0) * 2)']
+```
+
 ## Development
 If you want to help develop on this project, you can install it like so:
 ```
