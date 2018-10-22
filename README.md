@@ -68,3 +68,5 @@ If you want to help develop on this project, you can install it like so:
 mkvirtualenv -a $(pwd) $(basename $(pwd)) -p python3
 pip install -r requirements.txt
 ```
+
+This project uses `tox` for testing, so just run `tox` to run all tests.
