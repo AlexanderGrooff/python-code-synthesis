@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.com/AlexanderGrooff/python-code-synthesis.svg?branch=master)](https://travis-ci.com/AlexanderGrooff/python-code-synthesis)
 # Python code synthesis
 
 This project is used to interpret Python code and generate Python code based on given values.
