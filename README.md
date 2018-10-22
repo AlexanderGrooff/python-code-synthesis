@@ -69,4 +69,4 @@ mkvirtualenv -a $(pwd) $(basename $(pwd)) -p python3
 pip install -r requirements.txt
 ```
 
-This project uses `tox` for testing, so just run `tox` to run all tests.
+This project uses `nose` for testing, so just run `nosetest tests/` to run all tests.
