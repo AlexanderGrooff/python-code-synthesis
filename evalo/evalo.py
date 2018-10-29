@@ -11,6 +11,7 @@ from kanren.goals import heado, tailo, appendo
 from unification.more import unify_object
 
 import evalo.logging
+from evalo.utils import debugo
 
 logger = structlog.get_logger()
 typeo = goalify(type)
@@ -47,7 +48,7 @@ def eval_stmto(stmt, env, value):
     )
 
 
-def eval_expro(expr, env, value, depth=0, maxdepth=4):
+def eval_expro(expr, env, value, depth=0, maxdepth=3):
     logger.debug('Evaluating expr {} to {} with env {}'.format(expr, value, env))
     uuid = str(uuid4())[:4]
     v1 = var('v1' + uuid)
@@ -58,8 +59,6 @@ def eval_expro(expr, env, value, depth=0, maxdepth=4):
     op_v = var('op_v' + uuid)
     name = var('name' + uuid)
     str_e = var('str_e' + uuid)
-    body = var('body' + uuid)
-    body_v = var('body_v' + uuid)
     func = var('func' + uuid)
     func_v = var('func_v' + uuid)
     if isinstance(expr, ast.AST):
@@ -94,13 +93,27 @@ def eval_expro(expr, env, value, depth=0, maxdepth=4):
          eval_expro(e1, env, v1, depth + 1, maxdepth),
          eval_expro(e2, env, v2, depth + 1, maxdepth),
          (mod, v1, v2, value)),
-        #((eq, expr, ast.Lambda(body=body, args=[])),
-        # (typeo, value, FunctionType),
-        # eval_expro(body, env, body_v, depth + 1, maxdepth),
-        # (eq, lambda: body_v, value)),
         ((eq, expr, ast.Call(func=func, args=[], keywords=[])),
-         eval_expro(func, env, func_v, depth + 1, maxdepth),
+         eval_funco(func, env, func_v, depth + 1, maxdepth),
          (callo, func_v, value))
+    )
+
+
+def eval_funco(func, env, value, depth, maxdepth=3):
+    logger.debug('Evaluating func {} to {} with env {}'.format(func, value, env))
+    uuid = str(uuid4())[:4]
+    body = var('body' + uuid)
+    body_v = var('body_v' + uuid)
+
+    if depth == maxdepth:
+        logger.debug('Depth {} reached, which is the maximum depth'.format(depth))
+        return fail
+
+    return (conde,
+        ((eq, func, ast.Lambda(body=body, args=[])),
+         (typeo, value, FunctionType),
+         eval_expro(body, env, body_v, depth + 1, maxdepth),
+         (eq, lambda: body_v, value)),
     )
 
 
