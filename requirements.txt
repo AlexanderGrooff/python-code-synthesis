@@ -1,4 +1,4 @@
-git+https://github.com/AlexanderGrooff/unification.git
+git+https://github.com/AlexanderGrooff/unification.git@unify-reify-functions
 kanren
 nose
 structlog

@@ -11,6 +11,7 @@ from kanren.goals import heado, tailo, appendo
 from unification.more import unify_object
 
 import evalo.logging
+from evalo.utils import debugo
 
 logger = structlog.get_logger()
 typeo = goalify(type)
@@ -47,7 +48,7 @@ def eval_stmto(stmt, env, value):
     )
 
 
-def eval_expro(expr, env, value, depth=0, maxdepth=4):
+def eval_expro(expr, env, value, depth=0, maxdepth=3):
     logger.debug('Evaluating expr {} to {} with env {}'.format(expr, value, env))
     uuid = str(uuid4())[:4]
     v1 = var('v1' + uuid)
@@ -79,14 +80,20 @@ def eval_expro(expr, env, value, depth=0, maxdepth=4):
         ((eq, expr, ast.Num(n=value)),
          (membero, value, range(5))),
         ((eq, expr, ast.BinOp(left=e1, op=ast.Add(), right=e2)),
+         (typeo, v1, int),
+         (typeo, v2, int),
          eval_expro(e1, env, v1, depth + 1, maxdepth),
          eval_expro(e2, env, v2, depth + 1, maxdepth),
          (add, v1, v2, value)),
         ((eq, expr, ast.BinOp(left=e1, op=ast.Sub(), right=e2)),
+         (typeo, v1, int),
+         (typeo, v2, int),
          eval_expro(e1, env, v1, depth + 1, maxdepth),
          eval_expro(e2, env, v2, depth + 1, maxdepth),
          (sub, v1, v2, value)),
         ((eq, expr, ast.BinOp(left=e1, op=ast.Mult(), right=e2)),
+         (typeo, v1, int),
+         (typeo, v2, int),
          eval_expro(e1, env, v1, depth + 1, maxdepth),
          eval_expro(e2, env, v2, depth + 1, maxdepth),
          (mul, v1, v2, value)),
@@ -94,13 +101,14 @@ def eval_expro(expr, env, value, depth=0, maxdepth=4):
          eval_expro(e1, env, v1, depth + 1, maxdepth),
          eval_expro(e2, env, v2, depth + 1, maxdepth),
          (mod, v1, v2, value)),
-        #((eq, expr, ast.Lambda(body=body, args=[])),
-        # (typeo, value, FunctionType),
-        # eval_expro(body, env, body_v, depth + 1, maxdepth),
-        # (eq, lambda: body_v, value)),
         ((eq, expr, ast.Call(func=func, args=[], keywords=[])),
+         (typeo, func_v, FunctionType),
          eval_expro(func, env, func_v, depth + 1, maxdepth),
-         (callo, func_v, value))
+         (callo, func_v, value)),
+        ((eq, expr, ast.Lambda(body=body, args=[])),
+         (typeo, value, FunctionType),
+         eval_expro(body, env, body_v, depth + 1, maxdepth),
+         (eq, lambda: body_v, value)),
     )
 
 
