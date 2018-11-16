@@ -19,10 +19,16 @@ class TestLists(TestCase):
         self.assertEqual(ret[0], [])
 
     def test_list_with_one_element_evaluates_to_list_with_one_element(self):
-        pass
+        ast_expr = List(elts=[Num(n=1)])
+        ret = self.run_expr(ast_expr, var())
+        self.assertEqual(ret[0], [1])
 
     def test_list_with_ints_evaluates_to_list_with_ints(self):
-        pass
+        ast_expr = List(elts=[Num(n=1), Num(n=2)])
+        ret = self.run_expr(ast_expr, var())
+        self.assertEqual(ret[0], [1, 2])
 
     def test_nested_list_evaluates_every_list(self):
-        pass
+        ast_expr = List(elts=[List(elts=[Num(n=1)]), Num(n=2)])
+        ret = self.run_expr(ast_expr, var())
+        self.assertEqual(ret[0], [[1], 2])
