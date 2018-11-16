@@ -7,7 +7,7 @@ from kanren import eq, vars, goalify, isvar, var, run, unifiable, lany, \
     lall, membero, conde
 from kanren.arith import add, sub, mul, div, mod
 from kanren.core import EarlyGoalError, success, fail, everyg
-from kanren.goals import heado, tailo, appendo
+from kanren.goals import heado, tailo, appendo, conso
 from unification.more import unify_object
 
 import evalo.logging
@@ -55,6 +55,7 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
     v2 = var('v2' + uuid)
     e1 = var('e1' + uuid)
     e2 = var('e2' + uuid)
+    list_e = var('list_e' + uuid)
     op = var('op' + uuid)
     op_v = var('op_v' + uuid)
     name = var('name' + uuid)
@@ -79,6 +80,9 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
          (eq, str_e, value)),
         ((eq, expr, ast.Num(n=value)),
          (membero, value, range(5))),
+        ((eq, expr, ast.List(elts=list_e)),
+         (typeo, list_e, list),
+         eval_seqo(list_e, env, value, depth + 1, maxdepth)),
         ((eq, expr, ast.BinOp(left=e1, op=ast.Add(), right=e2)),
          (typeo, v1, int),
          (typeo, v2, int),
@@ -109,6 +113,27 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
          (typeo, value, FunctionType),
          eval_expro(body, env, body_v, depth + 1, maxdepth),
          (eq, lambda: body_v, value)),
+    )
+
+
+def eval_seqo(l, env, val, depth, maxdepth):
+    uuid = str(uuid4())[:4]
+    head_e = var('head_e' + uuid)
+    head_v = var('head_v' + uuid)
+    tail_e = var('tail_e' + uuid)
+    tail_v = var('tail_v' + uuid)
+    if depth == maxdepth:
+        logger.debug('Depth {} reached, which is the maximum depth'.format(depth))
+        return fail
+
+    return (conde,
+        ((eq, l, []),
+         (eq, val, [])),
+        ((conso, head_e, tail_e, l),
+         eval_expro(head_e, env, head_v, depth + 1, maxdepth),
+         eval_seqo(tail_e, env, tail_v, depth + 1, maxdepth),
+         (conso, head_v, tail_v, val),
+         (debugo, val)),
     )
 
 
