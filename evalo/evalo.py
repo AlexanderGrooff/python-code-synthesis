@@ -6,7 +6,7 @@ from uuid import uuid4
 from kanren import eq, vars, goalify, isvar, var, run, unifiable, lany, \
     lall, membero, conde
 from kanren.arith import add, sub, mul, div, mod
-from kanren.core import EarlyGoalError, success, fail
+from kanren.core import EarlyGoalError, success, fail, everyg
 from kanren.goals import heado, tailo, appendo
 from unification.more import unify_object
 
