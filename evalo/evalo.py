@@ -6,8 +6,8 @@ from uuid import uuid4
 from kanren import eq, vars, goalify, isvar, var, run, unifiable, lany, \
     lall, membero, conde
 from kanren.arith import add, sub, mul, div, mod
-from kanren.core import EarlyGoalError, success, fail, everyg
-from kanren.goals import heado, tailo, appendo, conso
+from kanren.core import EarlyGoalError, success, fail, everyg, unify
+from kanren.goals import heado, tailo, appendo, conso, LCons
 from unification.more import unify_object
 
 import evalo.logging
@@ -22,6 +22,20 @@ unifiable(ast.AST)
 def callo(func, val):
     if not isvar(func):
         return (eq, func(), val)
+    raise EarlyGoalError()
+
+
+def listo(v, l):
+    def goal_eq(s):
+        result = unify(v, list(l), s)
+        if result is not False:
+            yield result
+    return goal_eq
+
+
+def hasattro(o, attr):
+    if not isvar(o):
+        return (eq, hasattr(o, attr), True)
     raise EarlyGoalError()
 
 
@@ -49,13 +63,14 @@ def eval_stmto(stmt, env, value):
 
 
 def eval_expro(expr, env, value, depth=0, maxdepth=3):
-    logger.debug('Evaluating expr {} to {} with env {}'.format(expr, value, env))
+    #logger.debug('Evaluating expr {} to {} with env {}'.format(expr, value, env))
     uuid = str(uuid4())[:4]
     v1 = var('v1' + uuid)
     v2 = var('v2' + uuid)
     e1 = var('e1' + uuid)
     e2 = var('e2' + uuid)
     list_e = var('list_e' + uuid)
+    list_v = var('list_v' + uuid)
     op = var('op' + uuid)
     op_v = var('op_v' + uuid)
     name = var('name' + uuid)
@@ -70,7 +85,7 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
         logger.info('Found AST for value -> {}'.format(ast.dump(value)))
 
     if depth == maxdepth:
-        logger.debug('Depth {} reached, which is the maximum depth'.format(depth))
+        #logger.debug('Depth {} reached, which is the maximum depth'.format(depth))
         return fail
     return (conde,
         ((eq, expr, ast.Name(id=name, ctx=ast.Load())),
@@ -81,8 +96,9 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
         ((eq, expr, ast.Num(n=value)),
          (membero, value, range(5))),
         ((eq, expr, ast.List(elts=list_e)),
-         (typeo, list_e, list),
-         eval_seqo(list_e, env, value, depth + 1, maxdepth)),
+         (hasattro, list_e, '__iter__'),
+         eval_seqo(list_e, env, list_v, depth, maxdepth),
+         (listo, value, list_v)),
         ((eq, expr, ast.BinOp(left=e1, op=ast.Add(), right=e2)),
          (typeo, v1, int),
          (typeo, v2, int),
@@ -123,17 +139,16 @@ def eval_seqo(l, env, val, depth, maxdepth):
     tail_e = var('tail_e' + uuid)
     tail_v = var('tail_v' + uuid)
     if depth == maxdepth:
-        logger.debug('Depth {} reached, which is the maximum depth'.format(depth))
+        #logger.debug('Depth {} reached, which is the maximum depth'.format(depth))
         return fail
 
     return (conde,
         ((eq, l, []),
          (eq, val, [])),
         ((conso, head_e, tail_e, l),
-         eval_expro(head_e, env, head_v, depth + 1, maxdepth),
-         eval_seqo(tail_e, env, tail_v, depth + 1, maxdepth),
          (conso, head_v, tail_v, val),
-         (debugo, val)),
+         eval_expro(head_e, env, head_v, depth + 1, maxdepth),
+         eval_seqo(tail_e, env, tail_v, depth + 1, maxdepth)),
     )
 
 
