@@ -3,3 +3,5 @@ kanren
 nose
 structlog
 astunparse
+coverage
+multiprocessing_on_dill
