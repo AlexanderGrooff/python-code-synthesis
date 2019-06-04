@@ -7,7 +7,7 @@ from kanren import eq, vars, goalify, isvar, var, run, unifiable, lany, \
     lall, membero, conde
 from kanren.arith import add, sub, mul, div, mod
 from kanren.core import EarlyGoalError, success, fail
-from kanren.goals import heado, tailo, appendo
+from kanren.goals import heado, tailo, appendo, seteq
 from unification.more import unify_object
 
 import evalo.logging
@@ -30,19 +30,66 @@ def evalo(program, value):
     return eval_programo(program, [], value)
 
 
-def eval_programo(program, env, value):
+def eval_programo(program, env, value, depth=0, maxdepth=3):
     logger.info('Evaluating program {} to {} with env {}'.format(program, value, env))
 
-    return conde(
-        ((eval_stmto, program, env, value),),  # Change this
+    uuid = str(uuid4())[:4]
+    stmt = var('stmt' + uuid)
+    stmts = var('stmts' + uuid)
+
+    if isinstance(program, ast.AST):
+        logger.info('Found AST for program -> {}'.format(ast.dump(program)))
+    if isinstance(value, ast.AST):
+        logger.info('Found AST for program value -> {}'.format(ast.dump(value)))
+
+    if depth == maxdepth:
+        logger.debug('Depth {} reached, which is the maximum depth'.format(depth))
+        return fail
+
+    return (conde,
+        ((eq, program, ast.Module(body=stmts)),
+         (seteq, stmts, (stmt,)),  # Only support single stmt
+         (eval_stmto, stmt, env, value)),
+        #((eq, program, ast.Module(body=stmts)),
+        # (eval_stmt_listo, stmts, env, value)),
     )
 
 
-def eval_stmto(stmt, env, value):
+def eval_stmt_listo(stmts, env, value):
+    logger.info('Evaluating stmt list {} to {} with env {}'.format(stmts, value, env))
+
+    if isinstance(stmts, ast.AST):
+        logger.info('Found AST for stmt list -> {}'.format(ast.dump(stmts)))
+    if isinstance(value, ast.AST):
+        logger.info('Found AST for stmt list value -> {}'.format(ast.dump(value)))
+
+    uuid = str(uuid4())[:4]
+    stmt = var('stmt' + uuid)
+    tail = var('tailstmts' + uuid)
+    return (conde,
+        ((heado, stmt, stmts),
+         (eval_stmto, stmt, env, value)),
+        ((tailo, tail, stmts),
+         (eval_stmt_listo, tail, env, value))
+    )
+
+
+def eval_stmto(stmt, env, value, depth=0, maxdepth=3):
     logger.info('Evaluating stmt {} to {} with env {}'.format(stmt, value, env))
 
-    exprbody = var('exprbody')
-    return conde(
+    uuid = str(uuid4())[:4]
+    exprbody = var('exprbody' + uuid)
+
+    if isinstance(stmt, ast.AST):
+        logger.info('Found AST for stmt -> {}'.format(ast.dump(stmt)))
+    if isinstance(value, ast.AST):
+        logger.info('Found AST for stmt value -> {}'.format(ast.dump(value)))
+
+    if depth == maxdepth:
+        logger.info('Depth {} reached, which is the maximum depth'.format(depth))
+        return fail
+
+    return (conde,
         ((eq, stmt, ast.Expr(value=exprbody)),  # Expressions
          (eval_expro, exprbody, env, value)),
     )
@@ -66,7 +113,7 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
     if isinstance(expr, ast.AST):
         logger.info('Found AST for expr -> {}'.format(ast.dump(expr)))
     if isinstance(value, ast.AST):
-        logger.info('Found AST for value -> {}'.format(ast.dump(value)))
+        logger.info('Found AST for expr value -> {}'.format(ast.dump(value)))
 
     if depth == maxdepth:
         logger.debug('Depth {} reached, which is the maximum depth'.format(depth))
