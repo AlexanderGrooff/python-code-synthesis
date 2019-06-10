@@ -1,7 +1,8 @@
 from unittest.mock import Mock
 from unittest import TestCase
 
-from evalo.utils import count_goals
+from kanren import var, run
+from evalo.utils import count_goals, listeqo
 
 
 class TestCountGoals(TestCase):
@@ -19,3 +20,17 @@ class TestCountGoals(TestCase):
         ret = count_goals(((Mock(11), Mock(12)), Mock(2), Mock(3)))
 
         self.assertEqual(ret, 4)
+
+
+class TestListEqo(TestCase):
+    def setUp(self):
+        self.x = var()
+
+    def test_single_element_lists_are_equal(self):
+        ret = run(1, self.x, listeqo([1], self.x))
+        self.assertEqual(ret, ([1],))
+
+    def test_equal_length_but_different_elements_are_not_equal(self):
+        ret = run(1, self.x, listeqo([1], self.x))
+        self.assertEqual(ret, ([1],))
+
