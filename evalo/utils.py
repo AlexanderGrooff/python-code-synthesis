@@ -1,5 +1,7 @@
-from kanren.core import success
-from evalo.reify import ast_dump_substitute, ast_dump_if_possible
+import ast
+from typing import Union, Iterable
+
+import astunparse
 
 
 def count_goals(goals):
@@ -15,6 +17,14 @@ def count_goals(goals):
 
 def debugo(x):
     def f(s):
-        print("Variable: {}, Substitute: {}".format(ast_dump_if_possible(x), ast_dump_substitute(s)))
+        print("Variable: {}, Substitute: {}".format(rec_ast_parse(x), rec_ast_parse(s)))
         yield s
     return f
+
+
+def rec_ast_parse(obj: Union[ast.AST, Iterable], unparse=True):
+    if isinstance(obj, ast.AST):
+        return astunparse.unparse(obj).strip() if unparse else ast.dump(obj)
+    if isinstance(obj, dict):
+        return {k: rec_ast_parse(v) for k, v in obj.items()}
+    return [rec_ast_parse(a) for a in obj]

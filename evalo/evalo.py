@@ -3,15 +3,13 @@ import ast
 from types import FunctionType
 from uuid import uuid4
 
-from kanren import eq, vars, goalify, isvar, var, run, unifiable, lany, \
-    lall, membero, conde
-from kanren.arith import add, sub, mul, div, mod
-from kanren.core import EarlyGoalError, success, fail
-from kanren.goals import heado, tailo, appendo
-from unification.more import unify_object
+from kanren import eq, goalify, isvar, var, unifiable, membero, conde
+from kanren.arith import add, sub, mul, mod
+from kanren.core import EarlyGoalError, fail
+from kanren.goals import heado, tailo
 
-import evalo.logging
-from evalo.utils import debugo
+from evalo import logging
+from evalo.utils import rec_ast_parse
 
 logger = structlog.get_logger()
 typeo = goalify(type)
@@ -21,7 +19,7 @@ unifiable(ast.AST)
 
 def callo(func, val):
     if not isvar(func):
-        return (eq, func(), val)
+        return eq, func(), val
     raise EarlyGoalError()
 
 
@@ -64,9 +62,9 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
     func = var('func' + uuid)
     func_v = var('func_v' + uuid)
     if isinstance(expr, ast.AST):
-        logger.info('Found AST for expr -> {}'.format(ast.dump(expr)))
+        logger.info('Found AST for expr -> {}'.format(rec_ast_parse(expr)))
     if isinstance(value, ast.AST):
-        logger.info('Found AST for value -> {}'.format(ast.dump(value)))
+        logger.info('Found AST for value -> {}'.format(rec_ast_parse(value)))
 
     if depth == maxdepth:
         logger.debug('Depth {} reached, which is the maximum depth'.format(depth))
