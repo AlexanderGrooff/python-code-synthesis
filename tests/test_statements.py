@@ -4,6 +4,7 @@ from kanren import var, run
 
 from evalo.evalo import eval_stmto
 
+
 class TestStatements(TestCase):
     def run_stmt(self, expr, value, eval_expr=False, env=list()):
         results = run(5, expr if eval_expr else value, eval_stmto(expr, env, value))
