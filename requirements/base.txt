@@ -1,6 +1,4 @@
 git+https://github.com/AlexanderGrooff/unification.git@unify-reify-functions
 kanren
-nose
-structlog
+loguru
 astunparse
-ipython

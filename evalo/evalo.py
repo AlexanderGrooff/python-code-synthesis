@@ -1,17 +1,15 @@
-import structlog
 import ast
 from types import FunctionType
 from uuid import uuid4
 
+from loguru import logger
 from kanren import eq, goalify, isvar, var, unifiable, membero, conde
 from kanren.arith import add, sub, mul, mod
 from kanren.core import EarlyGoalError, fail
 from kanren.goals import heado, tailo
 
-from evalo import logging
 from evalo.utils import rec_ast_parse
 
-logger = structlog.get_logger()
 typeo = goalify(type)
 
 unifiable(ast.AST)
