@@ -51,18 +51,7 @@ def eval_stmto(stmt, env, value):
 def eval_expro(expr, env, value, depth=0, maxdepth=3):
     logger.debug("Evaluating expr {} to {} with env {}".format(expr, value, env))
     uuid = str(uuid4())[:4]
-    v1 = var("v1" + uuid)
-    v2 = var("v2" + uuid)
-    e1 = var("e1" + uuid)
-    e2 = var("e2" + uuid)
-    op = var("op" + uuid)
-    op_v = var("op_v" + uuid)
-    name = var("name" + uuid)
-    str_e = var("str_e" + uuid)
-    body = var("body" + uuid)
-    body_v = var("body_v" + uuid)
-    func = var("func" + uuid)
-    func_v = var("func_v" + uuid)
+
     if isinstance(expr, ast.AST):
         logger.info("Found AST for expr -> {}".format(rec_ast_parse(expr)))
     if isinstance(value, ast.AST):
@@ -73,43 +62,43 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
         return fail
     # fmt: off
     return (conde,
-        ((eq, expr, ast.Name(id=name, ctx=ast.Load())),
-         (lookupo, name, env, value)),
-        ((eq, expr, ast.Str(s=str_e)),
+        ((eq, expr, ast.Name(id=var("name" + uuid), ctx=ast.Load())),
+         (lookupo, var("name" + uuid), env, value)),
+        ((eq, expr, ast.Str(s=var("str_e" + uuid))),
          (typeo, value, str),
-         (eq, str_e, value)),
+         (eq, var("str_e" + uuid), value)),
         ((eq, expr, ast.Num(n=value)),
          (membero, value, range(5))),
-        ((eq, expr, ast.BinOp(left=e1, op=ast.Add(), right=e2)),
-         (typeo, v1, int),
-         (typeo, v2, int),
-         eval_expro(e1, env, v1, depth + 1, maxdepth),
-         eval_expro(e2, env, v2, depth + 1, maxdepth),
-         (add, v1, v2, value)),
-        ((eq, expr, ast.BinOp(left=e1, op=ast.Sub(), right=e2)),
-         (typeo, v1, int),
-         (typeo, v2, int),
-         eval_expro(e1, env, v1, depth + 1, maxdepth),
-         eval_expro(e2, env, v2, depth + 1, maxdepth),
-         (sub, v1, v2, value)),
-        ((eq, expr, ast.BinOp(left=e1, op=ast.Mult(), right=e2)),
-         (typeo, v1, int),
-         (typeo, v2, int),
-         eval_expro(e1, env, v1, depth + 1, maxdepth),
-         eval_expro(e2, env, v2, depth + 1, maxdepth),
-         (mul, v1, v2, value)),
-        ((eq, expr, ast.BinOp(left=e1, op=ast.Mod(), right=e2)),
-         eval_expro(e1, env, v1, depth + 1, maxdepth),
-         eval_expro(e2, env, v2, depth + 1, maxdepth),
-         (mod, v1, v2, value)),
-        ((eq, expr, ast.Call(func=func, args=[], keywords=[])),
-         (typeo, func_v, FunctionType),
-         eval_expro(func, env, func_v, depth + 1, maxdepth),
-         (callo, func_v, value)),
-        ((eq, expr, ast.Lambda(body=body, args=[])),
+        ((eq, expr, ast.BinOp(left=var("add_e1_" + uuid), op=ast.Add(), right=var("add_e2_" + uuid))),
+         (typeo, var("add_v1_" + uuid), int),
+         (typeo, var("add_v2_" + uuid), int),
+         eval_expro(var("add_e1_" + uuid), env, var("add_v1_" + uuid), depth + 1, maxdepth),
+         eval_expro(var("add_e2_" + uuid), env, var("add_v2_" + uuid), depth + 1, maxdepth),
+         (add, var("add_v1_" + uuid), var("add_v2_" + uuid), value)),
+        ((eq, expr, ast.BinOp(left=var("sub_e1_" + uuid), op=ast.Sub(), right=var("sub_e2_" + uuid))),
+         (typeo, var("sub_v1_" + uuid), int),
+         (typeo, var("sub_v2_" + uuid), int),
+         eval_expro(var("sub_e1_" + uuid), env, var("sub_v1_" + uuid), depth + 1, maxdepth),
+         eval_expro(var("sub_e2_" + uuid), env, var("sub_v2_" + uuid), depth + 1, maxdepth),
+         (sub, var("sub_v1_" + uuid), var("sub_v2_" + uuid), value)),
+        ((eq, expr, ast.BinOp(left=var("mult_e1_" + uuid), op=ast.Mult(), right=var("mult_e2_" + uuid))),
+         (typeo, var("mult_v1_" + uuid), int),
+         (typeo, var("mult_v2_" + uuid), int),
+         eval_expro(var("mult_e1_" + uuid), env, var("mult_v1_" + uuid), depth + 1, maxdepth),
+         eval_expro(var("mult_e2_" + uuid), env, var("mult_v2_" + uuid), depth + 1, maxdepth),
+         (mul, var("mult_v1_" + uuid), var("mult_v2_" + uuid), value)),
+        ((eq, expr, ast.BinOp(left=var("mod_e1_" + uuid), op=ast.Mod(), right=var("mod_e2_" + uuid))),
+         eval_expro(var("mod_e1_" + uuid), env, var("mod_v1_" + uuid), depth + 1, maxdepth),
+         eval_expro(var("mod_e2_" + uuid), env, var("mod_v2_" + uuid), depth + 1, maxdepth),
+         (mod, var("mod_v1_" + uuid), var("mod_v2_" + uuid), value)),
+        ((eq, expr, ast.Call(func=var("func" + uuid), args=[], keywords=[])),
+         (typeo, var("func_v" + uuid), FunctionType),
+         eval_expro(var("func" + uuid), env, var("func_v" + uuid), depth + 1, maxdepth),
+         (callo, var("func_v" + uuid), value)),
+        ((eq, expr, ast.Lambda(body=var("body" + uuid), args=[])),
          (typeo, value, FunctionType),
-         eval_expro(body, env, body_v, depth + 1, maxdepth),
-         (eq, lambda: body_v, value)),
+         eval_expro(var("body" + uuid), env, var("body_v" + uuid), depth + 1, maxdepth),
+         (eq, lambda: var("body_v" + uuid), value)),
     )
     # fmt: on
 
