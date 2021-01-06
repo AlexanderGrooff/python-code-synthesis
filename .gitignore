@@ -3,3 +3,4 @@ __pycache__
 tags
 *.egg-info
 .tox
+.coverage
