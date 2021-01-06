@@ -119,13 +119,13 @@ def lookupo(name, env, t):
     rest = var()
     key = var()
     val = var()
-    return (
-        conde,
-        (
-            (heado, head, env),
-            (heado, name, head),
-            (tailo, rest, head),
-            (heado, t, rest),
-        ),
-        ((tailo, rest, env), (lookupo, name, rest, t)),
+    # fmt: off
+    return (conde,
+        ((heado, head, env),
+         (heado, name, head),
+         (tailo, rest, head),
+         (heado, t, rest)),
+        ((tailo, rest, env),
+         (lookupo, name, rest, t))
     )
+    # fmt: on
