@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.com/AlexanderGrooff/python-code-synthesis.svg?branch=master)](https://travis-ci.com/AlexanderGrooff/python-code-synthesis)
 # Python code synthesis
 
 This project is used to interpret Python code and generate Python code based on given values.
@@ -14,8 +13,9 @@ This project can do both interpreting from Python code to values and vica versa.
 values will be converted to the correct interpreted values:
 
 ```
+> from evalo import *
 > x = var()
-> run(1, x, eval_expro(BinOp(left=Num(n=1), op=Add(), right=Num(n=1)), [], x))
+> run(1, x, eval_expro(ast.BinOp(left=ast.Num(n=1), op=ast.Add(), right=ast.Num(n=1)), [], x))
 
 (2,)
 ```
@@ -25,6 +25,7 @@ to Python code using external libraries. For example, if we want 5 different ver
 that are interpreted to the value `2`, we can do the following:
 
 ```
+> from evalo import *
 > x = var()
 > run(5, x, eval_expro(x, [], 2))
 
@@ -64,10 +65,10 @@ Using the [astunparse](https://github.com/simonpercivall/astunparse) library we 
 ```
 
 ## Development
-If you want to help develop on this project, you can install it like so:
+If you want to help develop on this project, you can install it like so using Python 3.7:
 ```
 mkvirtualenv -a $(pwd) $(basename $(pwd)) -p python3
 pip install -r requirements.txt
 ```
 
-This project uses `nose` for testing, so just run `nosetest tests/` to run all tests.
+This project uses `tox` with `pytest` for testing, so just run `tox` to run all tests.
