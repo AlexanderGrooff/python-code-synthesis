@@ -19,6 +19,7 @@ def debugo(x):
     def f(s):
         print("Variable: {}, Substitute: {}".format(rec_ast_parse(x), rec_ast_parse(s)))
         yield s
+
     return f
 
 
