@@ -1,17 +1,15 @@
-import structlog
 import ast
 from types import FunctionType
 from uuid import uuid4
 
+from loguru import logger
 from kanren import eq, goalify, isvar, var, unifiable, membero, conde
 from kanren.arith import add, sub, mul, mod
 from kanren.core import EarlyGoalError, fail
 from kanren.goals import heado, tailo
 
-from evalo import logging
 from evalo.utils import rec_ast_parse
 
-logger = structlog.get_logger()
 typeo = goalify(type)
 
 unifiable(ast.AST)
@@ -29,46 +27,51 @@ def evalo(program, value):
 
 
 def eval_programo(program, env, value):
-    logger.info('Evaluating program {} to {} with env {}'.format(program, value, env))
+    logger.info("Evaluating program {} to {} with env {}".format(program, value, env))
 
+    # fmt: off
     return conde(
         ((eval_stmto, program, env, value),),  # Change this
     )
+    # fmt: on
 
 
 def eval_stmto(stmt, env, value):
-    logger.info('Evaluating stmt {} to {} with env {}'.format(stmt, value, env))
+    logger.info("Evaluating stmt {} to {} with env {}".format(stmt, value, env))
 
-    exprbody = var('exprbody')
+    exprbody = var("exprbody")
+    # fmt: off
     return conde(
         ((eq, stmt, ast.Expr(value=exprbody)),  # Expressions
          (eval_expro, exprbody, env, value)),
     )
+    # fmt: on
 
 
 def eval_expro(expr, env, value, depth=0, maxdepth=3):
-    logger.debug('Evaluating expr {} to {} with env {}'.format(expr, value, env))
+    logger.debug("Evaluating expr {} to {} with env {}".format(expr, value, env))
     uuid = str(uuid4())[:4]
-    v1 = var('v1' + uuid)
-    v2 = var('v2' + uuid)
-    e1 = var('e1' + uuid)
-    e2 = var('e2' + uuid)
-    op = var('op' + uuid)
-    op_v = var('op_v' + uuid)
-    name = var('name' + uuid)
-    str_e = var('str_e' + uuid)
-    body = var('body' + uuid)
-    body_v = var('body_v' + uuid)
-    func = var('func' + uuid)
-    func_v = var('func_v' + uuid)
+    v1 = var("v1" + uuid)
+    v2 = var("v2" + uuid)
+    e1 = var("e1" + uuid)
+    e2 = var("e2" + uuid)
+    op = var("op" + uuid)
+    op_v = var("op_v" + uuid)
+    name = var("name" + uuid)
+    str_e = var("str_e" + uuid)
+    body = var("body" + uuid)
+    body_v = var("body_v" + uuid)
+    func = var("func" + uuid)
+    func_v = var("func_v" + uuid)
     if isinstance(expr, ast.AST):
-        logger.info('Found AST for expr -> {}'.format(rec_ast_parse(expr)))
+        logger.info("Found AST for expr -> {}".format(rec_ast_parse(expr)))
     if isinstance(value, ast.AST):
-        logger.info('Found AST for value -> {}'.format(rec_ast_parse(value)))
+        logger.info("Found AST for value -> {}".format(rec_ast_parse(value)))
 
     if depth == maxdepth:
-        logger.debug('Depth {} reached, which is the maximum depth'.format(depth))
+        logger.debug("Depth {} reached, which is the maximum depth".format(depth))
         return fail
+    # fmt: off
     return (conde,
         ((eq, expr, ast.Name(id=name, ctx=ast.Load())),
          (lookupo, name, env, value)),
@@ -108,6 +111,7 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
          eval_expro(body, env, body_v, depth + 1, maxdepth),
          (eq, lambda: body_v, value)),
     )
+    # fmt: on
 
 
 def lookupo(name, env, t):
@@ -115,6 +119,7 @@ def lookupo(name, env, t):
     rest = var()
     key = var()
     val = var()
+    # fmt: off
     return (conde,
         ((heado, head, env),
          (heado, name, head),
@@ -123,3 +128,4 @@ def lookupo(name, env, t):
         ((tailo, rest, env),
          (lookupo, name, rest, t))
     )
+    # fmt: on
