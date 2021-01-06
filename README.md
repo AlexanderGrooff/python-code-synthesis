@@ -1,3 +1,4 @@
+[![PyPI version](https://badge.fury.io/py/evalo.svg)](https://pypi.org/project/evalo/)
 # Python code synthesis
 
 This project is used to interpret Python code and generate Python code based on given values.
