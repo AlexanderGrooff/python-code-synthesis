@@ -5,9 +5,10 @@ with open("README.md", "r") as fp:
 
 setup(
     name="evalo",
-    version="0.1.0",
+    version="0.1.1",
     description="Reverse evaluate values to Python code using constraint solving",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     author="Alexander Grooff",
     author_email="alexandergrooff@gmail.com",
     url="https://github.com/AlexanderGrooff/python-code-synthesis",

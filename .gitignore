@@ -4,3 +4,5 @@ tags
 *.egg-info
 .tox
 .coverage
+dist
+build
