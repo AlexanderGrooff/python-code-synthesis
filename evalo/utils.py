@@ -32,6 +32,10 @@ def rec_ast_parse(obj: Union[ast.AST, Iterable], unparse=True):
 
 
 def ast_dump_if_possible(obj: T) -> Union[str, T]:
+    if isinstance(obj, list):
+        return [ast_dump_if_possible(child) for child in obj]
+    if isinstance(obj, tuple):
+        return (ast_dump_if_possible(child) for child in obj)
     if isinstance(obj, ast.AST):
         return ast.dump(obj)
     return obj
