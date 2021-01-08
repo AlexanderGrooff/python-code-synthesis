@@ -77,22 +77,26 @@ class TestExpressions(EvaloTestCase):
 
     def test_ast_single_element_list_is_correctly_interpreted(self):
         ret, _ = self.run_expr(
-            expr=ast.List(elts=[ast.Num(n=1)], ctx=ast.Load()),
-            value=var(), maxdepth=4
+            expr=ast.List(elts=[ast.Num(n=1)], ctx=ast.Load()), value=var(), maxdepth=4
         )
         self.assertEqual(ret[0], [1])
 
     def test_ast_multiple_element_list_is_correctly_interpreted(self):
         ret, _ = self.run_expr(
             expr=ast.List(elts=[ast.Num(n=1), ast.Num(n=3)], ctx=ast.Load()),
-            value=var(), maxdepth=4
+            value=var(),
+            maxdepth=4,
         )
         self.assertEqual(ret[0], [1, 3])
 
     def test_ast_nested_list_is_correctly_interpreted(self):
         ret, _ = self.run_expr(
-            expr=ast.List(elts=[ast.Num(n=2), ast.List(elts=[ast.Num(n=1)], ctx=ast.Load())], ctx=ast.Load()),
-            value=var(), maxdepth=4
+            expr=ast.List(
+                elts=[ast.Num(n=2), ast.List(elts=[ast.Num(n=1)], ctx=ast.Load())],
+                ctx=ast.Load(),
+            ),
+            value=var(),
+            maxdepth=4,
         )
         self.assertEqual(ret[0], [2, [1]])
 

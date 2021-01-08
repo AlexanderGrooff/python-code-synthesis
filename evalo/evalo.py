@@ -6,7 +6,7 @@ from uuid import uuid4
 from loguru import logger
 from kanren import eq, isvar, var, unifiable, membero, conde
 from kanren.arith import add, sub, mul, mod
-from kanren.core import EarlyGoalError, fail
+from kanren.core import EarlyGoalError, fail, run
 from kanren.goals import heado, tailo, conso
 from unification import Var
 
@@ -27,13 +27,19 @@ def tuple_to_listo(t, l):
     if isvar(t) and isvar(l):
         raise EarlyGoalError()
     if isvar(t):
+
         def list_to_tuple(old_list):
-            new_list = [list_to_tuple(x) if isinstance(x, list) else x for x in old_list]
+            new_list = [
+                list_to_tuple(x) if isinstance(x, list) else x for x in old_list
+            ]
             return (*new_list,)
+
         return eq, t, list_to_tuple(l)
     if isvar(l):
+
         def tuple_to_list(old_tuple):
             return [tuple_to_list(x) if isinstance(x, tuple) else x for x in old_tuple]
+
         return eq, tuple_to_list(t), l
 
 
@@ -71,14 +77,16 @@ def eval_stmto(stmt, env, value):
     new_env = var("new_env_" + uuid)
     # fmt: off
     goals = (conde,
-        ((eq, stmt, ast.Assign(targets=var("assign_targets_" + uuid), value=var("assign_value_" + uuid))),
-         (heado, var("assign_lhs_" + uuid), var("assign_targets_" + uuid)),  # TODO: Allow for multiple assigns: a, b, = ...
+        # TODO: Allow for multiple assigns: a, b, = ...
+        ((eq, stmt, ast.Assign(targets=[ast.Name(id=var("assign_lhs_" + uuid), ctx=ast.Store())], value=var("assign_value_" + uuid))),
          (eval_expro, var("assign_value_" + uuid), env, var("assign_rhs_" + uuid)),
-         (conso, [var("assign_lhs_" + uuid), var("assign_rhs_" + uuid)], env, new_env)),  # new_env = [lhs, rhs] + env
+         (conso, [var("assign_lhs_" + uuid), var("assign_rhs_" + uuid)], env, new_env),  # new_env = [lhs, rhs] + env
+         (eval_listo, new_env, env, var('evaluated_env_' + uuid)),),
         ((eq, stmt, ast.Expr(value=var("exprbody" + uuid))),  # Expressions
          (eval_expro, var("exprbody" + uuid), env, value)),
     )
-    return goals, new_env
+    evaluated_env = run(1, var('evaluated_env_' + uuid), goals)
+    return goals, evaluated_env[0]
     # fmt: on
 
 
@@ -160,6 +168,7 @@ def eval_listo(exprs: Union[List, Var], env, value, depth=0, maxdepth=3):
     head_value = var("head_value_" + uuid)
     tail_value = var("tail_value_" + uuid)
     tuple_value = var("lcons_value" + uuid)
+    # fmt: off
     return (conde,
         ((typeo, exprs, list),
          (typeo, value, list),
@@ -177,6 +186,7 @@ def eval_listo(exprs: Union[List, Var], env, value, depth=0, maxdepth=3):
            (tuple_to_listo, tuple_value, value),
           )))
     )
+    # fmt: on
 
 
 def lookupo(name, env, t):
