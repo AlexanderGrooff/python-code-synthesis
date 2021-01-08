@@ -1,4 +1,4 @@
-git+https://github.com/AlexanderGrooff/unification.git@unify-reify-functions
-kanren
+miniKanren
+logical-unification
 loguru
 astunparse
