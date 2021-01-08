@@ -7,11 +7,11 @@ from evalo.evalo import eval_stmto
 
 
 class EvaloTestCase(TestCase):
-    def run_expr(self, expr, value, eval_expr=False, env=list(), existing_goals=list(), maxdepth=3):
+    def run_expr(self, expr, value, eval_expr=False, env=list(), existing_goals=list(), maxdepth=3, n=5):
         goals = eval_expro(expr, env, value, depth=0, maxdepth=maxdepth)
         if existing_goals:
             goals = conde((goals,), (existing_goals,))
-        results = run(5, expr if eval_expr else value, goals)
+        results = run(n, expr if eval_expr else value, goals)
         print(
             "Evaluated results: {}".format([ast_dump_if_possible(x) for x in results])
         )

@@ -95,3 +95,18 @@ class TestExpressions(EvaloTestCase):
             value=var(), maxdepth=4
         )
         self.assertEqual(ret[0], [2, [1]])
+
+    def test_empty_list_can_be_reverse_interpreted(self):
+        ret, _ = self.run_expr(var(), [], eval_expr=True, n=1)
+        # TODO: This makes an assumption that it returns ast.List first
+        self.assertIsInstance(ret[0], ast.List)
+        self.assertEqual(ret[0].elts, [])
+
+    # TODO: Doesn't quite work yet
+    # def test_filled_list_can_be_reverse_interpreted(self):
+    #     ret, _ = self.run_expr(var(), [1], eval_expr=True, n=1)
+    #     # TODO: This makes an assumption that it returns ast.List first
+    #     self.assertIsInstance(ret[0], ast.List)
+    #     self.assertEqual(len(ret[0].elts), 1)
+    #     self.assertIsInstance(ret[0].elts[0], ast.Num)
+    #     self.assertEqual(ret[0].elts[0].n, 1)
