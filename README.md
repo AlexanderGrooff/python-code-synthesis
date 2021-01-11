@@ -69,7 +69,8 @@ Using the [astunparse](https://github.com/simonpercivall/astunparse) library we 
 If you want to help develop on this project, you can install it like so using Python 3.7:
 ```
 mkvirtualenv -a $(pwd) $(basename $(pwd)) -p python3
-pip install -r requirements.txt
+pip install -r requirements/development.txt
+pre-commit install
 ```
 
 This project uses `tox` with `pytest` for testing, so just run `tox` to run all tests.
