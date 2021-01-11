@@ -28,6 +28,14 @@ class TestExpressions(TestCase):
         ret = self.run_expr(var(), 1, eval_expr=True)
         self.assertEqual(len(ret), 5)
 
+    def test_asts_can_be_partially_filled_in(self):
+        ret = self.run_expr(
+            ast.BinOp(left=ast.Num(n=1), op=ast.Add(), right=ast.Num(n=var())),
+            3,
+            eval_expr=True,
+        )
+        self.assertEqual(ret[0].right.n, 2)
+
     def test_ast_addition_results_in_var_integer(self):
         ret = self.run_expr(
             ast.BinOp(left=ast.Num(n=1), op=ast.Add(), right=ast.Num(n=1)), var()
@@ -56,6 +64,12 @@ class TestExpressions(TestCase):
             ast.BinOp(left=ast.Num(n=3), op=ast.Mod(), right=ast.Num(n=2)), var()
         )
         self.assertEqual(ret[0], 1)
+
+    def test_ast_modulo_with_rhs_zero_is_not_picked_up(self):
+        ret = self.run_expr(
+            ast.BinOp(left=ast.Num(n=3), op=ast.Mod(), right=ast.Num(n=0)), var()
+        )
+        self.assertEqual(len(ret), 0)
 
     def test_ast_string_results_in_var_string(self):
         ret = self.run_expr(ast.Str(s="Hello world!"), var())
