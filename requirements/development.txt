@@ -5,3 +5,4 @@ ipython
 black
 pytest-cov
 tox
+pre-commit
