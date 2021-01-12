@@ -26,17 +26,22 @@ unifiable(ast.AST)
 
 
 def binopo(x, y, v, op):
+    def isnumber(n):
+        return isinstance(n, int) or isinstance(n, float)
+
     def binopo_goal(S: ConstrainedState):
         nonlocal x, y, v, op
 
         x_rf, y_rf, v_rf = reify((x, y, v), S)
         if not (isground(x_rf, S) and isground(y_rf, S) and isground(v_rf, S)):
-            if not isground(v_rf, S):
+            if not isground(v_rf, S) and isground(x_rf, S) and isground(y_rf, S):
                 g = eq(op(x_rf, y_rf), v_rf)
                 yield from g(S)
         else:
-            if op(x_rf, y_rf) == v_rf:
-                yield S
+            # TODO: Why isnt this covered by the `isinstanceo` goal?
+            if isnumber(x_rf) and isnumber(y_rf) and isnumber(v_rf):
+                if op(x_rf, y_rf) == v_rf:
+                    yield S
 
     return binopo_goal
 
@@ -62,8 +67,8 @@ def eval_stmto(stmt, env, value):
     exprbody = var("exprbody")
     # fmt: off
     return conde(
-        ((eq, stmt, ast.Expr(value=exprbody)),  # Expressions
-         (eval_expro, exprbody, env, value)),
+        (eq(stmt, ast.Expr(value=exprbody)),  # Expressions
+         eval_expro(exprbody, env, value)),
     )
     # fmt: on
 
@@ -92,9 +97,9 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
     return conde(
         (eq(expr, ast.Name(id=name, ctx=ast.Load())),
          lookupo(name, env, value)),
-        # ((eq, expr, ast.Str(s=str_e)),
-        #  (typeo, value, str),
-        #  (eq, str_e, value)),
+        (eq(expr, ast.Str(s=str_e)),
+         isinstanceo(value, str),
+         eq(str_e, value)),
         (eq(expr, ast.Num(n=value)),
          membero(value, [_ for _ in range(5)])),
         (eq(expr, ast.BinOp(left=e1, op=ast.Add(), right=e2)),
@@ -122,14 +127,14 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
          eval_expro(e2, env, v2, depth + 1, maxdepth),
          neq(v2, 0),  # Don't divide by zero
          binopo(v1, v2, value, op=mod)),
-        # (eq(expr, ast.Call(func=func, args=[], keywords=[])),
-        #  isinstanceo(func_v, FunctionType),
-        #  eval_expro(func, env, func_v, depth + 1, maxdepth),
-        #  applyo(func_v, [], value)),
-        # (eq(expr, ast.Lambda(body=body, args=[])),
-        #  isinstanceo(value, FunctionType),
-        #  eval_expro(body, env, body_v, depth + 1, maxdepth),
-        #  eq(lambda: body_v, value)),
+        (eq(expr, ast.Call(func=func, args=[], keywords=[])),
+         isinstanceo(func_v, FunctionType),
+         eval_expro(func, env, func_v, depth + 1, maxdepth),
+         applyo(func_v, [], value)),
+        (eq(expr, ast.Lambda(body=body, args=[])),
+         isinstanceo(value, FunctionType),
+         eval_expro(body, env, body_v, depth + 1, maxdepth),
+         eq(lambda: body_v, value)),
     )
     # fmt: on
 
