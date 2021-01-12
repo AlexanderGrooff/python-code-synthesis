@@ -1,10 +1,8 @@
 import ast
-from collections import Sequence
 from operator import add, sub, mul, mod
 from types import FunctionType
 from uuid import uuid4
 
-from kanren.util import pprint
 from unification.core import isground
 
 from kanren.constraints import (
@@ -16,7 +14,7 @@ from kanren.term import applyo
 from loguru import logger
 from kanren import eq, var, unifiable, membero, conde
 
-from kanren.core import fail, lall
+from kanren.core import fail
 from kanren.goals import heado, tailo
 from unification import reify
 
@@ -32,15 +30,21 @@ def binopo(x, y, v, op):
     def binopo_goal(S: ConstrainedState):
         nonlocal x, y, v, op
 
-        x_rf, y_rf, v_rf = reify((x, y, v), S)
-        if not (isground(x_rf, S) and isground(y_rf, S) and isground(v_rf, S)):
-            if not isground(v_rf, S) and isground(x_rf, S) and isground(y_rf, S):
-                g = eq(op(x_rf, y_rf), v_rf)
-                yield from g(S)
+        x_rf, y_rf, v_rf, op_rf = reify((x, y, v, op), S)
+        isground_all = [
+            isground(reified_value, S) for reified_value in [x_rf, y_rf, v_rf, op_rf]
+        ]
+        if not all(isground_all):
+            # We can only fix one LV at a time
+            if len([uv for uv in isground_all if uv is False]) == 1:
+                # TODO: Revop the other vars
+                if not isground(v_rf, S):
+                    g = eq(op_rf(x_rf, y_rf), v_rf)
+                    yield from g(S)
         else:
             # TODO: Why isnt this covered by the `isinstanceo` goal?
             if isnumber(x_rf) and isnumber(y_rf) and isnumber(v_rf):
-                if op(x_rf, y_rf) == v_rf:
+                if op_rf(x_rf, y_rf) == v_rf:
                     yield S
 
     return binopo_goal
@@ -56,7 +60,7 @@ def eval_programo(program, env, value):
 
     # fmt: off
     return conde(
-        ((eval_stmto, program, env, value),),  # Change this
+        (eval_stmto(program, env, value),),  # Change this
     )
     # fmt: on
 
@@ -102,31 +106,13 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
          eq(str_e, value)),
         (eq(expr, ast.Num(n=value)),
          membero(value, [_ for _ in range(5)])),
-        (eq(expr, ast.BinOp(left=e1, op=ast.Add(), right=e2)),
+        (eq(expr, ast.BinOp(left=e1, op=var('op_e_' + uuid), right=e2)),
          isinstanceo(v1, int),
          isinstanceo(v2, int),
          eval_expro(e1, env, v1, depth + 1, maxdepth),
          eval_expro(e2, env, v2, depth + 1, maxdepth),
-         binopo(v1, v2, value, op=add)),
-        (eq(expr, ast.BinOp(left=e1, op=ast.Sub(), right=e2)),
-         isinstanceo(v1, int),
-         isinstanceo(v2, int),
-         eval_expro(e1, env, v1, depth + 1, maxdepth),
-         eval_expro(e2, env, v2, depth + 1, maxdepth),
-         binopo(v1, v2, value, op=sub)),
-        (eq(expr, ast.BinOp(left=e1, op=ast.Mult(), right=e2)),
-         isinstanceo(v1, int),
-         isinstanceo(v2, int),
-         eval_expro(e1, env, v1, depth + 1, maxdepth),
-         eval_expro(e2, env, v2, depth + 1, maxdepth),
-         binopo(v1, v2, value, op=mul)),
-        (eq(expr, ast.BinOp(left=e1, op=ast.Mod(), right=e2)),
-         isinstanceo(v1, int),
-         isinstanceo(v2, int),
-         eval_expro(e1, env, v1, depth + 1, maxdepth),
-         eval_expro(e2, env, v2, depth + 1, maxdepth),
-         neq(v2, 0),  # Don't divide by zero
-         binopo(v1, v2, value, op=mod)),
+         eval_opo(var('op_e_' + uuid), var('op_v_' + uuid), v1, v2, value),
+         binopo(v1, v2, value, op=var('op_v_' + uuid))),
         (eq(expr, ast.Call(func=func, args=[], keywords=[])),
          isinstanceo(func_v, FunctionType),
          eval_expro(func, env, func_v, depth + 1, maxdepth),
@@ -135,6 +121,23 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
          isinstanceo(value, FunctionType),
          eval_expro(body, env, body_v, depth + 1, maxdepth),
          eq(lambda: body_v, value)),
+    )
+    # fmt: on
+
+
+def eval_opo(op, value, v1, v2, v):
+    # Extra args for future use
+    # fmt: off
+    return conde(
+        (eq(op, ast.Add()),
+         eq(value, add)),
+        (eq(op, ast.Sub()),
+         eq(value, sub)),
+        (eq(op, ast.Mult()),
+         eq(value, mul)),
+        (eq(op, ast.Mod()),
+         neq(v2, 0),  # Prevent division by zero
+         eq(value, mod)),
     )
     # fmt: on
 
