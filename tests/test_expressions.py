@@ -7,9 +7,9 @@ from evalo.evalo import eval_expro
 
 
 class TestExpressions(TestCase):
-    def run_expr(self, expr, value, eval_expr=False, env=list()):
+    def run_expr(self, expr, value, eval_expr=False, env=list(), n=5):
         results = run(
-            5,
+            n,
             expr if eval_expr else value,
             eval_expro(expr, env, value, depth=0, maxdepth=3),
         )
@@ -27,6 +27,14 @@ class TestExpressions(TestCase):
     def test_number_value_results_in_maximum_number_of_possibilities(self):
         ret = self.run_expr(var(), 1, eval_expr=True)
         self.assertEqual(len(ret), 5)
+
+    def test_asts_can_be_partially_filled_in(self):
+        ret = self.run_expr(
+            ast.BinOp(left=ast.Num(n=1), op=ast.Add(), right=ast.Num(n=var())),
+            3,
+            eval_expr=True,
+        )
+        self.assertEqual(ret[0].right.n, 2)
 
     def test_ast_addition_results_in_var_integer(self):
         ret = self.run_expr(
@@ -57,12 +65,19 @@ class TestExpressions(TestCase):
         )
         self.assertEqual(ret[0], 1)
 
+    def test_ast_modulo_with_rhs_zero_is_not_picked_up(self):
+        ret = self.run_expr(
+            ast.BinOp(left=ast.Num(n=3), op=ast.Mod(), right=ast.Num(n=0)), var()
+        )
+        self.assertEqual(len(ret), 0)
+
     def test_ast_string_results_in_var_string(self):
         ret = self.run_expr(ast.Str(s="Hello world!"), var())
         self.assertEqual(ret[0], "Hello world!")
 
+    # TODO: n=1 because otherwise it's very slow. Not sure why
     def test_string_value_results_in_ast_string(self):
-        ret = self.run_expr(var(), "Hello world!", eval_expr=True)
+        ret = self.run_expr(var(), "Hello world!", eval_expr=True, n=1)
         self.assertIsInstance(ret[0], ast.Str)
         self.assertEqual(ret[0].s, "Hello world!")
 

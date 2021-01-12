@@ -25,13 +25,18 @@ def debugo(x):
 
 def rec_ast_parse(obj: Union[ast.AST, Iterable], unparse=True):
     if isinstance(obj, ast.AST):
-        return astunparse.unparse(obj).strip() if unparse else ast.dump(obj)
+        try:
+            return astunparse.unparse(obj).strip() if unparse else ast.dump(obj)
+        except:
+            return ast_dump_if_possible(obj)
     if isinstance(obj, dict):
         return {k: rec_ast_parse(v) for k, v in obj.items()}
     return [rec_ast_parse(a) for a in obj]
 
 
 def ast_dump_if_possible(obj: T) -> Union[str, T]:
+    if isinstance(obj, Iterable):
+        return [ast_dump_if_possible(_) for _ in obj]
     if isinstance(obj, ast.AST):
         return ast.dump(obj)
     return obj
