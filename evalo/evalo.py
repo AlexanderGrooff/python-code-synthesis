@@ -123,15 +123,17 @@ def eval_stmto(stmt, env, value):
     new_env = var("new_env_" + uuid)
     # fmt: off
     goals = conde(
-        # TODO: Allow for multiple assigns: a, b, = ...
-        (eq(stmt, ast.Assign(targets=[ast.Name(id=var("assign_lhs_" + uuid), ctx=ast.Store())], value=var("assign_value_" + uuid))),
+        (eq(stmt, ast.Assign(targets=var('assign_targets_' + uuid), value=var("assign_value_" + uuid))),
+         # TODO: Allow for multiple assigns: a, b, = ...
+         heado(ast.Name(id=var('assign_lhs_' + uuid), ctx=ast.Store()), var('assign_targets_' + uuid)),
          eval_expro(var("assign_value_" + uuid), env, var("assign_rhs_" + uuid)),
          conso([var("assign_lhs_" + uuid), var("assign_rhs_" + uuid)], env, new_env),  # new_env = [lhs, rhs] + env
-         eval_listo(new_env, env, var('evaluated_env_' + uuid)),),
+         ),
         (eq(stmt, ast.Expr(value=var("exprbody" + uuid))),  # Expressions
          eval_expro(var("exprbody" + uuid), env, value)),
     )
-    evaluated_env = run(1, var('evaluated_env_' + uuid), goals)
+    logger.info("Goals for new env: {}".format(goals))
+    evaluated_env = run(1, new_env, goals)
     return goals, evaluated_env[0]
     # fmt: on
 
