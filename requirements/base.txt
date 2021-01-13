@@ -1,4 +1,4 @@
-git+https://github.com/AlexanderGrooff/unification.git@unify-reify-functions
-kanren
+miniKanren==1.0.1
+git+https://github.com/pythological/unification.git@ea52306ae727384879e541cb9e0b745315551470
 loguru
 astunparse

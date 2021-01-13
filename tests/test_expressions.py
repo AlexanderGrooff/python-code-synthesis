@@ -2,6 +2,7 @@ import ast
 from types import FunctionType
 from kanren import var
 
+from evalo import sort_by_complexity
 from tests.helpers import EvaloTestCase
 
 
@@ -13,6 +14,14 @@ class TestExpressions(EvaloTestCase):
     def test_number_value_results_in_maximum_number_of_possibilities(self):
         ret, _ = self.run_expr(var(), 1, eval_expr=True)
         self.assertEqual(len(ret), 5)
+
+    def test_asts_can_be_partially_filled_in(self):
+        ret, _ = self.run_expr(
+            ast.BinOp(left=ast.Num(n=1), op=ast.Add(), right=ast.Num(n=var())),
+            3,
+            eval_expr=True,
+        )
+        self.assertEqual(ret[0].right.n, 2)
 
     def test_ast_addition_results_in_var_integer(self):
         ret, _ = self.run_expr(
@@ -43,13 +52,20 @@ class TestExpressions(EvaloTestCase):
         )
         self.assertEqual(ret[0], 1)
 
+    def test_ast_modulo_with_rhs_zero_is_not_picked_up(self):
+        ret, _ = self.run_expr(
+            ast.BinOp(left=ast.Num(n=3), op=ast.Mod(), right=ast.Num(n=0)), var()
+        )
+        self.assertEqual(len(ret), 0)
+
     def test_ast_string_results_in_var_string(self):
         ret, _ = self.run_expr(ast.Str(s="Hello world!"), var())
         self.assertEqual(ret[0], "Hello world!")
 
+    # TODO: n=1 because otherwise it's very slow. Not sure why
     def test_string_value_results_in_ast_string(self):
-        ret, _ = self.run_expr(var(), "Hello world!", eval_expr=True)
-        self.assertIsInstance(ret[0], ast.Str)
+        ret, _ = self.run_expr(var(), "Hello world!", eval_expr=True, n=1)
+        self.assertIn(type(ret[0]), [ast.Str, ast.Constant])  # Can be Constant in 3.8+
         self.assertEqual(ret[0].s, "Hello world!")
 
     def test_ast_name_results_in_lookup_from_env(self):
@@ -101,16 +117,15 @@ class TestExpressions(EvaloTestCase):
         self.assertEqual(ret[0], [2, [1]])
 
     def test_empty_list_can_be_reverse_interpreted(self):
-        ret, _ = self.run_expr(var(), [], eval_expr=True, n=1)
-        # TODO: This makes an assumption that it returns ast.List first
-        self.assertIsInstance(ret[0], ast.List)
-        self.assertEqual(ret[0].elts, [])
+        ret, _ = self.run_expr(var(), [], eval_expr=True, n=3)
+        sorted_results = sort_by_complexity(ret)
+        self.assertIsInstance(sorted_results[0], ast.List)
+        self.assertEqual(sorted_results[0].elts, [])
 
-    # TODO: Doesn't quite work yet
-    # def test_filled_list_can_be_reverse_interpreted(self):
-    #     ret, _ = self.run_expr(var(), [1], eval_expr=True, n=1)
-    #     # TODO: This makes an assumption that it returns ast.List first
-    #     self.assertIsInstance(ret[0], ast.List)
-    #     self.assertEqual(len(ret[0].elts), 1)
-    #     self.assertIsInstance(ret[0].elts[0], ast.Num)
-    #     self.assertEqual(ret[0].elts[0].n, 1)
+    def test_filled_list_can_be_reverse_interpreted(self):
+        ret, _ = self.run_expr(var(), [1], eval_expr=True, n=3)
+        sorted_results = sort_by_complexity(ret)
+        self.assertIsInstance(sorted_results[0], ast.List)
+        self.assertEqual(len(sorted_results[0].elts), 1)
+        self.assertIsInstance(sorted_results[0].elts[0], ast.Num)
+        self.assertEqual(sorted_results[0].elts[0].n, 1)

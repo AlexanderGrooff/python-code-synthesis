@@ -10,14 +10,14 @@ class TestStatements(EvaloTestCase):
         self.assertEqual(ret[0], 1)
 
     # TODO: Fix this. Doesn't place var in env yet
-    # def test_assignment_adds_variable_to_env(self):
-    #     _, goals, new_env = self.run_stmt(
-    #         stmt=ast.Assign(
-    #             targets=[ast.Name(id="a", ctx=ast.Store())],
-    #             value=ast.Num(n=1),
-    #         ),
-    #         value=var("expected_var"),
-    #         env=[],
-    #     )
-    #     self.assertIsInstance(new_env, list)
-    #     self.assertEqual(new_env, [["a", 1]])
+    def test_assignment_adds_variable_to_env(self):
+        _, goals, new_env = self.run_stmt(
+            stmt=ast.Assign(
+                targets=[ast.Name(id="a", ctx=ast.Store())],
+                value=ast.Num(n=1),
+            ),
+            value=var("expected_var"),
+            env=[],
+        )
+        self.assertIsInstance(new_env, list)
+        self.assertEqual(new_env, [["a", 1]])
