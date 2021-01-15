@@ -118,14 +118,12 @@ class TestExpressions(EvaloTestCase):
 
     def test_empty_list_can_be_reverse_interpreted(self):
         ret, _ = self.run_expr(var(), [], eval_expr=True, n=3)
-        sorted_results = sort_by_complexity(ret)
-        self.assertIsInstance(sorted_results[0], ast.List)
-        self.assertEqual(sorted_results[0].elts, [])
+        for r in ret:
+            v, _ = self.run_expr(r, var(), n=1)
+            self.assertEqual(v[0], [])
 
     def test_filled_list_can_be_reverse_interpreted(self):
         ret, _ = self.run_expr(var(), [1], eval_expr=True, n=3)
-        sorted_results = sort_by_complexity(ret)
-        self.assertIsInstance(sorted_results[0], ast.List)
-        self.assertEqual(len(sorted_results[0].elts), 1)
-        self.assertIsInstance(sorted_results[0].elts[0], ast.Num)
-        self.assertEqual(sorted_results[0].elts[0].n, 1)
+        for r in ret:
+            v, _ = self.run_expr(r, var(), n=1)
+            self.assertEqual(v[0], [1])
