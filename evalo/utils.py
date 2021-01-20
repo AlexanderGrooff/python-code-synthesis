@@ -1,7 +1,10 @@
 import ast
+from copy import deepcopy
 from typing import Union, Iterable, T, List
 
 import astunparse
+from loguru import logger
+from unification import var
 
 
 def count_goals(goals):
@@ -55,3 +58,65 @@ def get_ast_complexity(obj) -> int:
 
 def sort_by_complexity(l: List[ast.AST]) -> List[ast.AST]:
     return sorted(l, key=lambda a: get_ast_complexity(a))
+
+
+def strip_ast(obj: ast.AST) -> ast.AST:
+    """
+    Strip an AST object from all irrelevant attributes like lineno. Useful for stripping input from ast.parse.
+    This does not mutate the original object because a new object is made.
+    :param ast.AST obj: AST object
+    :rtype: ast.AST
+    """
+    logger.debug("Stripping object {}".format(ast_dump_if_possible(obj)))
+    new_obj = deepcopy(obj)
+    for irrelevant_attr in [
+        "type_ignores",
+        "type_comment",
+        "lineno",
+        "col_offset",
+        "end_lineno",
+        "end_col_offset",
+    ]:
+        if hasattr(new_obj, irrelevant_attr):
+            delattr(new_obj, irrelevant_attr)
+            logger.debug(
+                "Removed {} from {}".format(
+                    irrelevant_attr, ast_dump_if_possible(new_obj)
+                )
+            )
+    logger.debug("Stripping contents of {}".format(ast_dump_if_possible(new_obj)))
+    for k, v in vars(new_obj).items():
+        if isinstance(v, Iterable) and not isinstance(v, str):
+            new_v = type(v)([strip_ast(c) for c in v if isinstance(c, ast.AST)])
+        elif isinstance(v, ast.AST):
+            new_v = strip_ast(v)
+        else:
+            new_v = v
+        setattr(new_obj, k, new_v)
+    logger.debug("Stripped object: {}".format(ast_dump_if_possible(new_obj)))
+    return new_obj
+
+
+def replace_ast_name_with_lvar(obj: ast.AST, replace_var: str) -> ast.AST:
+    """
+    Replace a name being loaded in the AST with a logic variable
+    """
+    if isinstance(obj, ast.Name) and obj.id == replace_var:
+        return var(replace_var)
+
+    new_obj = deepcopy(obj)
+    for k, v in vars(obj).items():
+        if isinstance(v, Iterable) and not isinstance(v, str):
+            new_v = type(v)(
+                [
+                    replace_ast_name_with_lvar(c, replace_var)
+                    for c in v
+                    if isinstance(c, ast.AST)
+                ]
+            )
+        elif isinstance(v, ast.AST):
+            new_v = replace_ast_name_with_lvar(v, replace_var)
+        else:
+            new_v = v
+        setattr(new_obj, k, new_v)
+    return new_obj
