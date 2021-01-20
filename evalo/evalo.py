@@ -96,11 +96,30 @@ def binopo(x, y, v, op):
     return binopo_goal
 
 
-def evalo(program, value, replace_var: str = None):
+def evalo(program: ast.AST, value: Var, replace_var: str = None):
     replace_var = replace_var or DEFAULT_REPLACE_VAR
+    if value.token != replace_var:
+        raise RuntimeError("Value {} should have token {}".format(value, replace_var))
+
     program = strip_ast(program)
     program = replace_ast_name_with_lvar(program, replace_var=replace_var)
-    return eval_programo(program, [], value)
+
+    goals, env = eval_programo(program, [], value)
+    res = run(3, value, goals)
+
+    r = res[0]
+    if isvar(r):
+        logger.info("No results found for {}: {}".format(value, r))
+        return res
+    logger.info(
+        "Found {} to be {}".format(ast_dump_if_possible(value), ast_dump_if_possible(r))
+    )
+    if isinstance(r, ast.Name):
+        evaluated_value = run(1, value, lookupo(r.id, env, value))
+        logger.info(
+            "Found evaluated value {}".format(ast_dump_if_possible(evaluated_value))
+        )
+        return evaluated_value
 
 
 def eval_programo(program: ast.Module, env, value):
@@ -120,10 +139,11 @@ def eval_programo(program: ast.Module, env, value):
                 ast_dump_if_possible(ast_expr), ast_dump_if_possible(curr_env)
             )
         )
-        g, curr_env = eval_stmto(ast_expr, curr_env, value)
+        v = var()
+        g, curr_env = eval_stmto(ast_expr, curr_env, v)
         goals.append(g)
 
-    return conde(goals)
+    return conde(goals), curr_env
 
 
 def eval_stmto(stmt, env, value, depth=0, maxdepth=3):
