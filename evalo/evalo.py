@@ -292,40 +292,6 @@ def eval_expr_listo(exprs: Union[List, Var], env, value, depth=0, maxdepth=3):
     # fmt: on
 
 
-def eval_stmt_listo(stmts: Union[List, Var], env, value, depth=0, maxdepth=3):
-    """ Evaluate a list of statements. Not the same as evaluating the List AST """
-    if depth >= maxdepth:
-        # logger.debug("Depth {} reached, which is the maximum depth".format(depth))
-        return fail
-    uuid = str(uuid4())[:4]
-    head_expr = var("head_expr_" + uuid)
-    tail_expr = var("tail_expr_" + uuid)
-    head_value = var("head_value_" + uuid)
-    tail_value = var("tail_value_" + uuid)
-    logger.info(
-        "Evaluating list of statements {} to {}".format(
-            ast_dump_if_possible(stmts), ast_dump_if_possible(value)
-        )
-    )
-    # fmt: off
-    return conde(
-        (typeo(stmts, list),
-         typeo(value, list),
-         # Either empty list or filled list
-         conde(
-             (eq(stmts, []),
-              eq(value, [])),
-             (conso(head_expr, tail_expr, stmts),
-              conso(head_value, var('new_env_' + uuid), eval_stmto(head_expr, env, head_value, depth + 1, maxdepth)),  # TODO: Use new env
-              # TODO: how to do depth in lists?
-              typeo(tail_expr, list),
-              typeo(tail_value, list),
-              eval_stmt_listo(tail_expr, env, tail_value, depth + 1, maxdepth),
-              conso(head_value, tail_value, value))))
-    )
-    # fmt: on
-
-
 def literal_lookup(name, env):
     for k, v in env:
         if name == k:
