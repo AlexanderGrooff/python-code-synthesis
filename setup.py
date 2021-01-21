@@ -5,7 +5,7 @@ with open("README.md", "r") as fp:
 
 setup(
     name="evalo",
-    version="0.1.2",
+    version="0.2.0",
     description="Reverse evaluate values to Python code using constraint solving",
     long_description=long_description,
     long_description_content_type="text/markdown",

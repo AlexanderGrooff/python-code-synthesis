@@ -2,7 +2,6 @@ import ast
 from types import FunctionType
 from kanren import var
 
-from evalo import sort_by_complexity
 from tests.helpers import EvaloTestCase
 
 
@@ -86,20 +85,22 @@ class TestExpressions(EvaloTestCase):
 
     def test_ast_empty_list_evaluates_to_empty_list(self):
         ret, goals = self.run_expr(
-            expr=ast.List(elts=[], ctx=ast.Load()),
+            ast_expr=ast.List(elts=[], ctx=ast.Load()),
             value=var(),
         )
         self.assertEqual(ret[0], [])
 
     def test_ast_single_element_list_is_correctly_interpreted(self):
         ret, _ = self.run_expr(
-            expr=ast.List(elts=[ast.Num(n=1)], ctx=ast.Load()), value=var(), maxdepth=4
+            ast_expr=ast.List(elts=[ast.Num(n=1)], ctx=ast.Load()),
+            value=var(),
+            maxdepth=4,
         )
         self.assertEqual(ret[0], [1])
 
     def test_ast_multiple_element_list_is_correctly_interpreted(self):
         ret, _ = self.run_expr(
-            expr=ast.List(elts=[ast.Num(n=1), ast.Num(n=3)], ctx=ast.Load()),
+            ast_expr=ast.List(elts=[ast.Num(n=1), ast.Num(n=3)], ctx=ast.Load()),
             value=var(),
             maxdepth=4,
         )
@@ -107,7 +108,7 @@ class TestExpressions(EvaloTestCase):
 
     def test_ast_nested_list_is_correctly_interpreted(self):
         ret, _ = self.run_expr(
-            expr=ast.List(
+            ast_expr=ast.List(
                 elts=[ast.Num(n=2), ast.List(elts=[ast.Num(n=1)], ctx=ast.Load())],
                 ctx=ast.Load(),
             ),

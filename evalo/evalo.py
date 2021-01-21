@@ -11,13 +11,14 @@ from kanren.term import applyo
 from loguru import logger
 from kanren import eq, var, unifiable, membero, conde
 
-from kanren.core import fail, run, lall
+from kanren.core import fail, run, lall, lany
 from kanren.goals import heado, tailo, conso
-from unification import reify, Var
+from unification import reify, Var, isvar
 
-from evalo.utils import ast_dump_if_possible
+from evalo.utils import ast_dump_if_possible, strip_ast, replace_ast_name_with_lvar
 
 unifiable(ast.AST)
+DEFAULT_REPLACE_VAR = "x"
 
 
 def typeo(v, t):
@@ -95,32 +96,91 @@ def binopo(x, y, v, op):
     return binopo_goal
 
 
-def evalo(program, value):
-    unifiable(ast.AST)
-    return eval_programo(program, [], value)
+def evalo(program: ast.AST, value: Var, replace_var: str = None):
+    replace_var = replace_var or DEFAULT_REPLACE_VAR
+    if value.token != replace_var:
+        raise RuntimeError("Value {} should have token {}".format(value, replace_var))
 
+    program = strip_ast(program)
+    program = replace_ast_name_with_lvar(program, replace_var=replace_var)
 
-def eval_programo(program, env, value):
-    logger.info("Evaluating program {} to {} with env {}".format(program, value, env))
+    goals, env = eval_programo(program, [], value)
+    res = run(1, value, goals)
 
-    # fmt: off
-    return conde(
-        (eval_stmto(program, env, value),),  # Change this
-    )
-    # fmt: on
-
-
-def eval_stmto(stmt, env, value):
+    r = res[0]
+    logger.info("Final result: {}".format(ast_dump_if_possible(res)))
+    if isvar(r):
+        logger.info("No results found for {}: {}".format(value, r))
+        return r
     logger.info(
-        "Evaluating stmt {} to {} with env {}".format(
-            ast_dump_if_possible(stmt),
+        "Found {} to be {}".format(ast_dump_if_possible(value), ast_dump_if_possible(r))
+    )
+    # TODO: This only works on the last assign
+    if isinstance(r, ast.Name):
+        evaluated_value = literal_lookup(r.id, env)
+        logger.info(
+            "Found evaluated value {}".format(ast_dump_if_possible(evaluated_value))
+        )
+        return evaluated_value
+
+
+def find_new_env_after_stmt(goals, old_env, new_env_lv):
+    new_env_results = run(1, new_env_lv, goals)
+    if not new_env_results:
+        evaluated_env = old_env
+    else:
+        evaluated_env = new_env_results[0]
+        if isvar(new_env_results[0]):
+            logger.info(
+                "Env has to be ground. Using old env {} instead of new env {}".format(
+                    old_env, new_env_lv
+                )
+            )
+            evaluated_env = old_env
+        else:
+            logger.info("Found new env {}".format(evaluated_env))
+    logger.info("Returning new env {}".format(goals, evaluated_env))
+    return evaluated_env
+
+
+def eval_programo(program: ast.Module, env, value):
+    logger.info(
+        "Evaluating program {} to {} with env {}".format(
+            ast_dump_if_possible(program),
             ast_dump_if_possible(value),
             ast_dump_if_possible(env),
         )
     )
+
+    goals = []
+    curr_env = env
+    for ast_expr in program.body:
+        logger.info(
+            "Evaluating statement {} with env {}".format(
+                ast_dump_if_possible(ast_expr), ast_dump_if_possible(curr_env)
+            )
+        )
+        new_env = var()
+        g = eval_stmto(ast_expr, curr_env, new_env)
+        curr_env = find_new_env_after_stmt(g, old_env=curr_env, new_env_lv=new_env)
+        goals.append(g)
+
+    return conde(goals), curr_env
+
+
+def eval_stmto(stmt, env, new_env, depth=0, maxdepth=3):
+    logger.info(
+        "Evaluating stmt {} to new env {} using old env {}".format(
+            ast_dump_if_possible(stmt),
+            ast_dump_if_possible(new_env),
+            ast_dump_if_possible(env),
+        )
+    )
+    if depth >= maxdepth:
+        return fail
+
     uuid = str(uuid4())[:4]
 
-    new_env = var("new_env_" + uuid)
     # fmt: off
     goals = conde(
         (eq(stmt, ast.Assign(targets=var('assign_targets_' + uuid), value=var("assign_value_" + uuid))),
@@ -129,13 +189,12 @@ def eval_stmto(stmt, env, value):
          eval_expro(var("assign_value_" + uuid), env, var("assign_rhs_" + uuid)),
          conso([var("assign_lhs_" + uuid), var("assign_rhs_" + uuid)], env, new_env),  # new_env = [lhs, rhs] + env
          ),
+        # Expression statements don't change the environment
         (eq(stmt, ast.Expr(value=var("exprbody" + uuid))),  # Expressions
-         eval_expro(var("exprbody" + uuid), env, value)),
+         eq(env, new_env)),
     )
-    logger.info("Goals for new env: {}".format(goals))
-    evaluated_env = run(1, new_env, goals)
-    return goals, evaluated_env[0]
     # fmt: on
+    return goals
 
 
 def eval_expro(expr, env, value, depth=0, maxdepth=3):
@@ -152,6 +211,11 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
     return conde(
         (eq(expr, ast.Name(id=var('name_' + uuid), ctx=ast.Load())),
          lookupo(var('name_' + uuid), env, value)),
+        # (lany(
+        #     typeo(value, int),
+        #     typeo(value, str),
+        #  ),
+        #  eq(expr, ast.Constant(value=value)),),
         (eq(expr, ast.Str(s=var('str_e_' + uuid))),
          typeo(value, str),
          eq(var('str_e_' + uuid), value)),
@@ -167,7 +231,7 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
 
         # Lists
         (eq(expr, ast.List(elts=var("list_elements_" + uuid), ctx=ast.Load())),
-         eval_listo(var("list_elements_" + uuid), env, value, depth, maxdepth)),
+         eval_expr_listo(var("list_elements_" + uuid), env, value, depth, maxdepth)),
 
         # Functions
         (eq(expr, ast.Lambda(body=var('body_' + uuid), args=[])),
@@ -199,7 +263,7 @@ def eval_opo(op, value, v1, v2, v):
     # fmt: on
 
 
-def eval_listo(exprs: Union[List, Var], env, value, depth=0, maxdepth=3):
+def eval_expr_listo(exprs: Union[List, Var], env, value, depth=0, maxdepth=3):
     """ Evaluate a list of expressions. Not the same as evaluating the List AST """
     if depth >= maxdepth:
         # logger.debug("Depth {} reached, which is the maximum depth".format(depth))
@@ -222,10 +286,16 @@ def eval_listo(exprs: Union[List, Var], env, value, depth=0, maxdepth=3):
               # TODO: how to do depth in lists?
               typeo(tail_expr, list),
               typeo(tail_value, list),
-              eval_listo(tail_expr, env, tail_value, depth + 1, maxdepth),
+              eval_expr_listo(tail_expr, env, tail_value, depth + 1, maxdepth),
               conso(head_value, tail_value, value))))
     )
     # fmt: on
+
+
+def literal_lookup(name, env):
+    for k, v in env:
+        if name == k:
+            return v
 
 
 def lookupo(name, env, t, depth=0, maxdepth=100):
