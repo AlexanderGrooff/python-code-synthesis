@@ -111,13 +111,13 @@ def evalo(program: ast.AST, value: Var, replace_var: str = None):
     logger.info("Final result: {}".format(ast_dump_if_possible(res)))
     if isvar(r):
         logger.info("No results found for {}: {}".format(value, r))
-        return res
+        return r
     logger.info(
         "Found {} to be {}".format(ast_dump_if_possible(value), ast_dump_if_possible(r))
     )
     # TODO: This only works on the last assign
     if isinstance(r, ast.Name):
-        evaluated_value = run(1, value, lookupo(r.id, env, value))
+        evaluated_value = literal_lookup(r.id, env)
         logger.info(
             "Found evaluated value {}".format(ast_dump_if_possible(evaluated_value))
         )
@@ -324,6 +324,12 @@ def eval_stmt_listo(stmts: Union[List, Var], env, value, depth=0, maxdepth=3):
               conso(head_value, tail_value, value))))
     )
     # fmt: on
+
+
+def literal_lookup(name, env):
+    for k, v in env:
+        if name == k:
+            return v
 
 
 def lookupo(name, env, t, depth=0, maxdepth=100):
