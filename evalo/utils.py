@@ -76,6 +76,7 @@ def strip_ast(obj: ast.AST) -> ast.AST:
         "col_offset",
         "end_lineno",
         "end_col_offset",
+        "kind",
     ]:
         if hasattr(new_obj, irrelevant_attr):
             delattr(new_obj, irrelevant_attr)

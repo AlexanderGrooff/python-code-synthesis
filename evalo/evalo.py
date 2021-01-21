@@ -11,7 +11,7 @@ from kanren.term import applyo
 from loguru import logger
 from kanren import eq, var, unifiable, membero, conde
 
-from kanren.core import fail, run, lall
+from kanren.core import fail, run, lall, lany
 from kanren.goals import heado, tailo, conso
 from unification import reify, Var, isvar
 
@@ -105,21 +105,42 @@ def evalo(program: ast.AST, value: Var, replace_var: str = None):
     program = replace_ast_name_with_lvar(program, replace_var=replace_var)
 
     goals, env = eval_programo(program, [], value)
-    res = run(3, value, goals)
+    res = run(1, value, goals)
 
     r = res[0]
+    logger.info("Final result: {}".format(ast_dump_if_possible(res)))
     if isvar(r):
         logger.info("No results found for {}: {}".format(value, r))
         return res
     logger.info(
         "Found {} to be {}".format(ast_dump_if_possible(value), ast_dump_if_possible(r))
     )
+    # TODO: This only works on the last assign
     if isinstance(r, ast.Name):
         evaluated_value = run(1, value, lookupo(r.id, env, value))
         logger.info(
             "Found evaluated value {}".format(ast_dump_if_possible(evaluated_value))
         )
         return evaluated_value
+
+
+def find_new_env_after_stmt(goals, old_env, new_env_lv):
+    new_env_results = run(1, new_env_lv, goals)
+    if not new_env_results:
+        evaluated_env = old_env
+    else:
+        evaluated_env = new_env_results[0]
+        if isvar(new_env_results[0]):
+            logger.info(
+                "Env has to be ground. Using old env {} instead of new env {}".format(
+                    old_env, new_env_lv
+                )
+            )
+            evaluated_env = old_env
+        else:
+            logger.info("Found new env {}".format(evaluated_env))
+    logger.info("Returning new env {}".format(goals, evaluated_env))
+    return evaluated_env
 
 
 def eval_programo(program: ast.Module, env, value):
@@ -139,18 +160,19 @@ def eval_programo(program: ast.Module, env, value):
                 ast_dump_if_possible(ast_expr), ast_dump_if_possible(curr_env)
             )
         )
-        v = var()
-        g, curr_env = eval_stmto(ast_expr, curr_env, v)
+        new_env = var()
+        g = eval_stmto(ast_expr, curr_env, new_env)
+        curr_env = find_new_env_after_stmt(g, old_env=curr_env, new_env_lv=new_env)
         goals.append(g)
 
     return conde(goals), curr_env
 
 
-def eval_stmto(stmt, env, value, depth=0, maxdepth=3):
+def eval_stmto(stmt, env, new_env, depth=0, maxdepth=3):
     logger.info(
-        "Evaluating stmt {} to {} with env {}".format(
+        "Evaluating stmt {} to new env {} using old env {}".format(
             ast_dump_if_possible(stmt),
-            ast_dump_if_possible(value),
+            ast_dump_if_possible(new_env),
             ast_dump_if_possible(env),
         )
     )
@@ -158,7 +180,6 @@ def eval_stmto(stmt, env, value, depth=0, maxdepth=3):
         return fail
 
     uuid = str(uuid4())[:4]
-    new_env = var("new_env_" + uuid)
 
     # fmt: off
     goals = conde(
@@ -167,29 +188,13 @@ def eval_stmto(stmt, env, value, depth=0, maxdepth=3):
          heado(ast.Name(id=var('assign_lhs_' + uuid), ctx=ast.Store()), var('assign_targets_' + uuid)),
          eval_expro(var("assign_value_" + uuid), env, var("assign_rhs_" + uuid)),
          conso([var("assign_lhs_" + uuid), var("assign_rhs_" + uuid)], env, new_env),  # new_env = [lhs, rhs] + env
-         # TODO: Is this a correct assumption to make? Assigning LHS to the value doesn't always have to be correct
-         eq(var("assign_rhs_" + uuid), value),
          ),
+        # Expression statements don't change the environment
         (eq(stmt, ast.Expr(value=var("exprbody" + uuid))),  # Expressions
-         eval_expro(var("exprbody" + uuid), env, value)),
+         eq(env, new_env)),
     )
     # fmt: on
-    evaluated_env_results = run(1, new_env, goals)
-    if not evaluated_env_results:
-        evaluated_env = env
-    else:
-        evaluated_env = evaluated_env_results[0]
-        if isvar(evaluated_env_results[0]):
-            logger.info(
-                "Env has to be ground. Using old env {} instead of new env {}".format(
-                    env, new_env
-                )
-            )
-            evaluated_env = env
-        else:
-            logger.info("Found new env {}".format(evaluated_env))
-    logger.info("Returning goals {} and env {}".format(goals, evaluated_env))
-    return goals, evaluated_env
+    return goals
 
 
 def eval_expro(expr, env, value, depth=0, maxdepth=3):
@@ -206,6 +211,11 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
     return conde(
         (eq(expr, ast.Name(id=var('name_' + uuid), ctx=ast.Load())),
          lookupo(var('name_' + uuid), env, value)),
+        # (lany(
+        #     typeo(value, int),
+        #     typeo(value, str),
+        #  ),
+        #  eq(expr, ast.Constant(value=value)),),
         (eq(expr, ast.Str(s=var('str_e_' + uuid))),
          typeo(value, str),
          eq(var('str_e_' + uuid), value)),

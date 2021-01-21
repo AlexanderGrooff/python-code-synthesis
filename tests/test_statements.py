@@ -5,18 +5,30 @@ from tests.helpers import EvaloTestCase
 
 
 class TestStatements(EvaloTestCase):
-    def test_expression_is_evaluated_to_value(self):
-        ret, _, _ = self.run_stmt(ast.Expr(value=ast.Num(n=1)), var("expected_var"))
-        self.assertEqual(ret[0], 1)
+    def test_expression_doesnt_change_env(self):
+        ret, _ = self.run_stmt(ast_expr=ast.Expr(value=ast.Num(n=1)), value=var())
+        self.assertEqual(ret[0], [])
 
     def test_assignment_adds_variable_to_env(self):
-        _, goals, new_env = self.run_stmt(
-            stmt=ast.Assign(
+        ret, _ = self.run_stmt(
+            ast_expr=ast.Assign(
                 targets=[ast.Name(id="a", ctx=ast.Store())],
                 value=ast.Num(n=1),
             ),
-            value=var("expected_var"),
+            value=var(),
             env=[],
         )
-        self.assertIsInstance(new_env, list)
-        self.assertEqual(new_env, [["a", 1]])
+        self.assertEqual(ret[0], [["a", 1]])
+
+    def test_reverse_interpret_assignment(self):
+        ret, _ = self.run_stmt(
+            ast_expr=ast.Assign(
+                targets=[ast.Name(id="a", ctx=ast.Store())],
+                value=var(),
+            ),
+            value=[["a", []]],
+            env=[],
+            eval_expr=True,
+        )
+        self.assertIsInstance(ret[0], ast.Assign)
+        self.assertEqual(ast.literal_eval(ret[0].value), [])
