@@ -1,6 +1,7 @@
 import ast
 from kanren import var
 
+from evalo.utils import strip_ast
 from tests.helpers import EvaloTestCase
 
 
@@ -32,3 +33,13 @@ class TestStatements(EvaloTestCase):
         )
         self.assertIsInstance(ret[0], ast.Assign)
         self.assertEqual(ast.literal_eval(ret[0].value), [])
+
+    def test_assignment_puts_lambda_in_env(self):
+        a = strip_ast(ast.parse("f = lambda: []"))
+        ret, _ = self.run_stmt(
+            ast_expr=a.body[0],
+            value=var(),
+            env=[],
+        )
+        self.assertEqual(ret[0][0][0], "f")
+        self.assertEqual(ret[0][0][1](), [])

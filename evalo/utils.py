@@ -1,8 +1,10 @@
 import ast
 from copy import deepcopy
+from types import FunctionType
 from typing import Union, Iterable, T, List
 
 import astunparse
+from codetransformer import Code
 from loguru import logger
 from unification import var
 
@@ -121,3 +123,18 @@ def replace_ast_name_with_lvar(obj: ast.AST, replace_var: str) -> ast.AST:
             new_v = v
         setattr(new_obj, k, new_v)
     return new_obj
+
+
+def explode_function(f: FunctionType):
+    return {k: getattr(f.__code__, k) for k in dir(f.__code__) if k.startswith("co_")}
+
+
+def function_equality(f1: FunctionType, f2: FunctionType) -> bool:
+    c_f1 = Code.from_pyfunc(f1)
+    c_f2 = Code.from_pyfunc(f2)
+    logger.info("Comparing instructions {} to {}".format(c_f1.instrs, c_f2.instrs))
+    for i1, i2 in zip(c_f1.instrs, c_f2.instrs):
+        if not i1.equiv(i2):
+            logger.info(f"{i1} doesn't match {i2}")
+            return False
+    return True

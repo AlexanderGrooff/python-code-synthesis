@@ -1,12 +1,30 @@
 from unittest import TestCase
 
-from kanren import run, conde, lall
+from codetransformer import Code
+from kanren import run
 
 from evalo import eval_expro, ast_dump_if_possible
-from evalo.evalo import eval_stmto
+from evalo.evalo import eval_stmto, init_evalo
+from evalo.utils import function_equality
 
 
 class EvaloTestCase(TestCase):
+    def setUp(self):
+        init_evalo()
+
+    def assertFunctionEqual(self, f1, f2):
+        if function_equality(f1, f2):
+            return True
+        else:
+            c_f1 = Code.from_pyfunc(f1)
+            c_f2 = Code.from_pyfunc(f2)
+
+            raise AssertionError(
+                "Functions not equal: instructions {} vs {}".format(
+                    c_f1.instrs, c_f2.instrs
+                )
+            )
+
     def run_expr(self, *args, **kwargs):
         return self.run_eval(eval_func=eval_expro, *args, **kwargs)
 

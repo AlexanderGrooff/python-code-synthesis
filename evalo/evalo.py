@@ -11,14 +11,22 @@ from kanren.term import applyo
 from loguru import logger
 from kanren import eq, var, unifiable, membero, conde
 
-from kanren.core import fail, run, lall, lany
+from kanren.core import fail, run, lall
 from kanren.goals import heado, tailo, conso
 from unification import reify, Var, isvar
 
+from evalo.reify import init_reify
+from evalo.unify import init_unify
 from evalo.utils import ast_dump_if_possible, strip_ast, replace_ast_name_with_lvar
 
-unifiable(ast.AST)
+
 DEFAULT_REPLACE_VAR = "x"
+
+
+def init_evalo():
+    unifiable(ast.AST)
+    init_unify()
+    init_reify()
 
 
 def typeo(v, t):
@@ -33,7 +41,6 @@ def typeo(v, t):
                 yield from g(S)
             # TODO: What if v_rf is not yet grounded?
             else:
-                # g = applyo(isinstance, v_rf, t_rf)
                 yield S
         else:
             if type(v_rf) == t_rf:
@@ -43,9 +50,6 @@ def typeo(v, t):
 
 
 def binopo(x, y, v, op):
-    def isnumber(n):
-        return isinstance(n, int) or isinstance(n, float)
-
     def binopo_goal(S: ConstrainedState):
         nonlocal x, y, v, op
 
@@ -207,6 +211,10 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
 
     if depth >= maxdepth:
         return fail
+
+    # Define function vars here so that they are easily reified with codetransformer
+    body_v = var("body_v")  # TODO: Not so nice. This can overlap with other body_v's!
+
     # fmt: off
     return conde(
         (eq(expr, ast.Name(id=var('name_' + uuid), ctx=ast.Load())),
@@ -234,14 +242,29 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
          eval_expr_listo(var("list_elements_" + uuid), env, value, depth, maxdepth)),
 
         # Functions
-        (eq(expr, ast.Lambda(body=var('body_' + uuid), args=[])),
+        (eq(expr, ast.Lambda(body=var('body_' + uuid), args=var("lambda_args_" + uuid))),
          typeo(value, FunctionType),
-         eval_expro(var('body_' + uuid), env, var('body_v_' + uuid), depth + 1, maxdepth),
-         eq(lambda: var('body_v_' + uuid), value)),
+         eval_argso(var("lambda_args_" + uuid), env, var("lambda_lhs_" + uuid)),
+         eval_expro(var('body_' + uuid), env, body_v, depth + 1, maxdepth),
+         # TODO: How to do multiple args here?
+         eq(lambda: body_v, value)),
         (eq(expr, ast.Call(func=var('func_' + uuid), args=[], keywords=[])),
-         typeo(var('func_v_' + uuid), FunctionType),
+         # typeo(var('func_v_' + uuid), FunctionType),
          eval_expro(var('func_' + uuid), env, var('func_v_' + uuid), depth + 1, maxdepth),
          applyo(var('func_v_' + uuid), [], value)),
+    )
+    # fmt: on
+
+
+def eval_argso(args_expr, env, value):
+    uuid = str(uuid4())[:4]
+    args = var("args_" + uuid)
+    # fmt: off
+    return conde(
+        (conde(
+          (eq(args_expr, ast.arguments(posonlyargs=[], args=args, vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[])),),
+          (eq(args_expr, []),)),
+         eq(args, []),),
     )
     # fmt: on
 

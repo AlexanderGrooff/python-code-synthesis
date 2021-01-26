@@ -1,4 +1,10 @@
+# Required for commit specific installs
+pip>=21.0.0
 miniKanren==1.0.1
 git+https://github.com/pythological/unification.git@ea52306ae727384879e541cb9e0b745315551470
+
+# Contains a fix for py38
+-e git+https://github.com/gerrymanoim/codetransformer.git@py38#egg=4ca73a6c88610a5553f6240f467e2b196136c3b5
+#-e git+https://github.com/llllllllll/codetransformer/pull/73/commits/4ca73a6c88610a5553f6240f467e2b196136c3b5
 loguru
 astunparse

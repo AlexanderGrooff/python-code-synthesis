@@ -83,6 +83,25 @@ class TestExpressions(EvaloTestCase):
         )
         self.assertEqual(ret[0], 1)
 
+    def test_ast_call_with_lambda_from_env(self):
+        ret, _ = self.run_expr(
+            ast.Call(func=ast.Name(id="f", ctx=ast.Load()), args=[], keywords=[]),
+            var(),
+            env=[["f", lambda: 1]],
+        )
+        self.assertEqual(ret[0], 1)
+
+    def test_fill_in_lambda_body(self):
+        x = var("x")
+        ret, _ = self.run_expr(
+            ast.Lambda(args=[], body=x),
+            value=lambda: 1,
+            env=[],
+            eval_expr=True,
+        )
+        self.assertIsInstance(ret[0], ast.Lambda)
+        self.assertEqual(ast.literal_eval(ret[0].body), 1)
+
     def test_ast_empty_list_evaluates_to_empty_list(self):
         ret, goals = self.run_expr(
             ast_expr=ast.List(elts=[], ctx=ast.Load()),
