@@ -1,3 +1,4 @@
+import ast
 from unittest import TestCase
 
 from codetransformer import Code
@@ -11,6 +12,12 @@ from evalo.utils import function_equality
 class EvaloTestCase(TestCase):
     def setUp(self):
         init_evalo()
+
+    def evaluate_ast_expr(self, ast_expr) -> object:
+        print(f"Evaluating {ast_dump_if_possible(ast_expr)}")
+        e = ast.fix_missing_locations(ast.Expression(body=ast_expr))
+        c = compile(e, "Test file name", "eval")
+        return eval(c)
 
     def assertFunctionEqual(self, f1, f2):
         if function_equality(f1, f2):

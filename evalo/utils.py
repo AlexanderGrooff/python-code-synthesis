@@ -138,3 +138,14 @@ def function_equality(f1: FunctionType, f2: FunctionType) -> bool:
             logger.info(f"{i1} doesn't match {i2}")
             return False
     return True
+
+
+def print_divider_block(s: str, block_char=None):
+    """
+    Create a divider block for clear separation in logging
+    """
+    block_char = block_char or "#"
+    block_width = len(s) + 2 * len(f"{block_char} ")
+    logger.info(f"{block_char * block_width}")
+    logger.info(f"{block_char} {s} {block_char}")
+    logger.info(f"{block_char * block_width}")

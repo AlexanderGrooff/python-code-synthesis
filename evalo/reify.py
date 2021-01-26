@@ -15,9 +15,14 @@ def init_reify():
     _reify.add((FunctionType, Mapping), _reify_FunctionType)
 
 
-def val_to_instrs(v) -> List[Instruction]:
+def val_to_instrs(v) -> Optional[List[Instruction]]:
     # TODO: Definitely not fool-proof to get a code object
-    code = compile(str(v), "", "eval")
+    # code = compile(str(v), "", "eval")
+    try:
+        code = compile(str(v), "", "eval")
+    except Exception as e:
+        logger.warning(f"Couldn't compile {v} to instructions, got error: {e}")
+        return
     instrs = Code.from_pycode(code).instrs
     # Compile always appends a return, so remove that
     if instrs[-1].equiv(instructions.RETURN_VALUE()):
@@ -29,9 +34,12 @@ def replace_logicvar_with_val(f, logicvar_name, val):
     class ReplaceLogicVar(CodeTransformer):
         @pattern(instructions.LOAD_GLOBAL | instructions.LOAD_DEREF)
         def _replace_logicvar(self, loadlogicvar):
+            new_instrs = val_to_instrs(val)
+            if not new_instrs:
+                yield loadlogicvar
+                return
             if loadlogicvar.arg == logicvar_name:
                 logger.info("Replacing {} with {}".format(loadlogicvar, val))
-                new_instrs = val_to_instrs(val)
                 for instr in new_instrs:
                     yield instr.steal(loadlogicvar)
                 # yield instructions.LOAD_CONST(val).steal(loadlogicvar)
@@ -63,7 +71,8 @@ def name_from_global(f: FunctionType, s: Mapping, name: str) -> Optional[object]
 
 def name_as_lv(s: Mapping, name: str) -> Optional[object]:
     lv = var(name)
-    v = reify(lv, s)
+    # v = reify(lv, s)
+    v = s.get(lv)
     if v != lv:
         logger.info("Found {} to be a logicvar with value {}".format(name, v))
         return v
@@ -71,6 +80,7 @@ def name_as_lv(s: Mapping, name: str) -> Optional[object]:
 
 
 def _reify_FunctionType(f: FunctionType, s: Mapping):
+    logger.info(f"Reifying function {f}")
     shadow_dict = {}
     c = f.__code__
     reifiable_names = c.co_names + c.co_freevars
@@ -85,11 +95,14 @@ def _reify_FunctionType(f: FunctionType, s: Mapping):
             reifiable_names, shadow_dict
         )
     )
-    for logicvar, val in shadow_dict.items():
-        logger.info(f"Starting replacement of {logicvar} with {val}")
-        f = replace_logicvar_with_val(f, logicvar, val)
-    new_c = Code.from_pyfunc(f)
-    logger.info(f"New instructions: {new_c.instrs}")
+    if shadow_dict:
+        for logicvar, val in shadow_dict.items():
+            logger.info(f"Starting replacement of {logicvar} with {val}")
+            f = replace_logicvar_with_val(f, logicvar, val)
+        new_c = Code.from_pyfunc(f)
+        logger.info(f"New instructions: {new_c.instrs}")
 
-    yield construction_sentinel
-    yield f
+        yield construction_sentinel
+        yield f
+    else:
+        yield f

@@ -17,8 +17,13 @@ from unification import reify, Var, isvar
 
 from evalo.reify import init_reify
 from evalo.unify import init_unify
-from evalo.utils import ast_dump_if_possible, strip_ast, replace_ast_name_with_lvar
-
+from evalo.utils import (
+    ast_dump_if_possible,
+    strip_ast,
+    replace_ast_name_with_lvar,
+    print_divider_block,
+    sort_by_complexity,
+)
 
 DEFAULT_REPLACE_VAR = "x"
 
@@ -100,32 +105,36 @@ def binopo(x, y, v, op):
     return binopo_goal
 
 
-def evalo(program: ast.AST, value: Var, replace_var: str = None):
-    replace_var = replace_var or DEFAULT_REPLACE_VAR
-    if value.token != replace_var:
-        raise RuntimeError("Value {} should have token {}".format(value, replace_var))
+def evalo(
+    program: ast.AST, exprs: List[ast.AST], values: List, replace_var: Union[str, Var]
+):
+    replace_var = replace_var.token if isvar(replace_var) else replace_var
+    globals()[replace_var] = var(replace_var)
 
     program = strip_ast(program)
+    stripped_exprs = []
+    for e in exprs:
+        if isinstance(e, ast.Module):
+            e = module_to_expr(e)
+        e = strip_ast(e)
+        e = replace_ast_name_with_lvar(e, replace_var=replace_var)
+        stripped_exprs.append(e)
+    exprs = stripped_exprs
+
     program = replace_ast_name_with_lvar(program, replace_var=replace_var)
 
-    goals, env = eval_programo(program, [], value)
-    res = run(1, value, goals)
+    program_goals, env = eval_programo(program, [])
 
-    r = res[0]
-    logger.info("Final result: {}".format(ast_dump_if_possible(res)))
-    if isvar(r):
-        logger.info("No results found for {}: {}".format(value, r))
-        return r
-    logger.info(
-        "Found {} to be {}".format(ast_dump_if_possible(value), ast_dump_if_possible(r))
-    )
-    # TODO: This only works on the last assign
-    if isinstance(r, ast.Name):
-        evaluated_value = literal_lookup(r.id, env)
-        logger.info(
-            "Found evaluated value {}".format(ast_dump_if_possible(evaluated_value))
-        )
-        return evaluated_value
+    expr_goals = []
+    print_divider_block("Done parsing program")
+    for expr, value in zip(exprs, values):
+        logger.info("Evaluating {} with env {} to value {}".format(expr, env, value))
+        g = eval_expro(expr, env, value)
+        expr_goals.append(g)
+        print_divider_block(f"Done parsing expr {expr}")
+
+    results = run(3, globals()[replace_var], lall(program_goals, *expr_goals))
+    return sort_by_complexity(results)
 
 
 def find_new_env_after_stmt(goals, old_env, new_env_lv):
@@ -147,11 +156,10 @@ def find_new_env_after_stmt(goals, old_env, new_env_lv):
     return evaluated_env
 
 
-def eval_programo(program: ast.Module, env, value):
+def eval_programo(program: ast.Module, env):
     logger.info(
-        "Evaluating program {} to {} with env {}".format(
+        "Evaluating program {} with env {}".format(
             ast_dump_if_possible(program),
-            ast_dump_if_possible(value),
             ast_dump_if_possible(env),
         )
     )
@@ -201,6 +209,10 @@ def eval_stmto(stmt, env, new_env, depth=0, maxdepth=3):
     return goals
 
 
+def module_to_expr(module: ast.Module) -> ast.AST:
+    return module.body[0].value
+
+
 def eval_expro(expr, env, value, depth=0, maxdepth=3):
     # logger.debug("Evaluating expr {} to {} with env {}".format(expr, value, env))
     uuid = str(uuid4())[:4]
@@ -214,6 +226,8 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
 
     # Define function vars here so that they are easily reified with codetransformer
     body_v = var("body_v")  # TODO: Not so nice. This can overlap with other body_v's!
+    func_e = var("func_e")  # TODO: Not so nice. This can overlap with other body_v's!
+    func_v = var("func_v")  # TODO: Not so nice. This can overlap with other body_v's!
 
     # fmt: off
     return conde(
@@ -249,11 +263,47 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
          # TODO: How to do multiple args here?
          eq(lambda: body_v, value)),
         (eq(expr, ast.Call(func=var('func_' + uuid), args=[], keywords=[])),
-         # typeo(var('func_v_' + uuid), FunctionType),
+         typeo(var('func_v_' + uuid), FunctionType),
          eval_expro(var('func_' + uuid), env, var('func_v_' + uuid), depth + 1, maxdepth),
-         applyo(var('func_v_' + uuid), [], value)),
+         callo(var('func_v_' + uuid), [], value)),
     )
     # fmt: on
+
+
+def callo(func, args, val):
+    def callo_goal(S: ConstrainedState):
+        nonlocal func, args, val
+
+        func_rf, args_rf, val_rf = reify((func, args, val), S)
+        isground_all = [
+            isground(reified_value, S) for reified_value in [func_rf, args_rf, val_rf]
+        ]
+        if not all(isground_all):
+            if len([v for v in isground_all if v is False]) == 1:
+                logger.debug(
+                    f"Making function {func_rf} called with {args_rf} equal to {val_rf}"
+                )
+                if isground(func_rf, S):
+                    if isinstance(func_rf, FunctionType):
+                        g = eq(func_rf(*args), val_rf)
+                        yield from g(S)
+                elif isground(val_rf, S):
+                    g = lall(
+                        applyo(func_rf, args, val),
+                        typeo(func_rf, FunctionType),
+                    )
+                    yield from g(S)
+                else:
+                    raise NotImplementedError("Can't handle args yet")
+            else:
+                logger.debug(
+                    f"Cannot reify call because both {func_rf} and {val_rf} are not ground"
+                )
+        else:
+            if isinstance(func_rf, FunctionType) and func_rf(*args) == val:
+                yield S
+
+    return callo_goal
 
 
 def eval_argso(args_expr, env, value):

@@ -102,6 +102,17 @@ class TestExpressions(EvaloTestCase):
         self.assertIsInstance(ret[0], ast.Lambda)
         self.assertEqual(ast.literal_eval(ret[0].body), 1)
 
+    def test_fill_in_function_call(self):
+        x = var("x")
+        ret, _ = self.run_expr(
+            ast.Call(func=x, args=[], keywords=[]),
+            value=1,
+            env=[],
+            eval_expr=True,
+        )
+        self.assertIsInstance(ret[0], ast.Call)
+        self.assertEqual(self.evaluate_ast_expr(ret[0]), 1)
+
     def test_ast_empty_list_evaluates_to_empty_list(self):
         ret, goals = self.run_expr(
             ast_expr=ast.List(elts=[], ctx=ast.Load()),
@@ -145,5 +156,4 @@ class TestExpressions(EvaloTestCase):
     def test_filled_list_can_be_reverse_interpreted(self):
         ret, _ = self.run_expr(var(), [1], eval_expr=True, n=3)
         for r in ret:
-            v, _ = self.run_expr(r, var(), n=1)
-            self.assertEqual(v[0], [1])
+            self.assertEqual(self.evaluate_ast_expr(r), [1])

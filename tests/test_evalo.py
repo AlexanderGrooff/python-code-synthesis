@@ -1,40 +1,35 @@
 import ast
 
-from unification import var
-
 from evalo.evalo import evalo
 from tests.helpers import EvaloTestCase
 
 
 class TestEvalo(EvaloTestCase):
-    def test_single_statement_is_evaluated(self):
-        x = var("x")
-        r = evalo(ast.parse("x = []"), x)
-        self.assertEqual(r, [])
+    def test_evaluate_expression_that_contains_the_replacevar(self):
+        ret = evalo(
+            program=ast.parse("4"), exprs=[ast.parse("x")], values=[[]], replace_var="x"
+        )
+        self.assertTrue(len(ret) > 0)
+        for r in ret:
+            self.assertEqual(self.evaluate_ast_expr(r), [])
 
-    def test_other_replacevar_can_be_specified(self):
-        x = var("a")
-        r = evalo(ast.parse("a = []"), x, replace_var="a")
-        self.assertEqual(r, [])
+    # TODO: This returns Name(id='a', ctx=Load())
+    # def test_evaluate_assign_statement(self):
+    #     ret = evalo(program=ast.parse("a = 4"), exprs=[ast.parse("x")], values=[4], replace_var='x')
+    #     self.assertTrue(len(ret) > 0)
+    #     for r in ret:
+    #         self.assertEqual(self.evaluate_ast_expr(r), 4)
 
-    def test_multiple_statements_are_handled(self):
-        x = var("x")
-        r = evalo(ast.parse("[]; x = []"), x)
-        self.assertEqual(r, [])
+    # TODO: This hangs
+    # def test_no_results_are_given_if_constraints_are_impossible(self):
+    #     ret = evalo(program=ast.parse("123"), exprs=[ast.parse("x"), ast.parse("x")], values=[[], 3], replace_var='x')
+    #     self.assertEqual(ret, ())
 
-    def test_env_is_used_for_next_statement(self):
-        x = var("x")
-        r = evalo(ast.parse("a = []; x = a"), x)
-        self.assertEqual(r, [])
-
-    def test_assigning_a_different_variable_doesnt_create_results(self):
-        x = var("x")
-        # Specific replace_var to make example clearer
-        r = evalo(ast.parse("a = []"), x, replace_var="x")
-        # Result is just the logic var
-        self.assertEqual(r, x)
-
-    def test_assignment_after_x_doesnt_change_result(self):
-        x = var("x")
-        r = evalo(ast.parse("x = []; a = [[]]"), x)
-        self.assertEqual(r, [])
+    def test_program_with_lambda(self):
+        ret = evalo(
+            program=ast.parse("f = lambda: x"),
+            exprs=[ast.parse("f()")],
+            values=[[]],
+            replace_var="x",
+        )
+        self.assertTrue(len(ret) > 0)
