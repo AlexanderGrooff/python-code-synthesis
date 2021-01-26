@@ -134,7 +134,7 @@ def evalo(
         print_divider_block(f"Done parsing expr {expr}")
 
     results = run(3, globals()[replace_var], lall(program_goals, *expr_goals))
-    return sort_by_complexity(results)
+    return sort_by_complexity(results), env
 
 
 def find_new_env_after_stmt(goals, old_env, new_env_lv):

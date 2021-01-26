@@ -1,4 +1,5 @@
 import ast
+from typing import List, Optional
 from unittest import TestCase
 
 from codetransformer import Code
@@ -13,7 +14,13 @@ class EvaloTestCase(TestCase):
     def setUp(self):
         init_evalo()
 
-    def evaluate_ast_expr(self, ast_expr) -> object:
+    def evaluate_ast_expr(self, ast_expr, env: Optional[List] = None) -> object:
+        if env:
+            # Put env in context by executing it
+            env_c = compile(
+                "; ".join([f"{v[0]} = {v[1]}" for v in env]), "Test compile env", "exec"
+            )
+            exec(env_c)
         print(f"Evaluating {ast_dump_if_possible(ast_expr)}")
         e = ast.fix_missing_locations(ast.Expression(body=ast_expr))
         c = compile(e, "Test file name", "eval")
