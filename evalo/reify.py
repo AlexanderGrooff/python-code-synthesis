@@ -17,7 +17,6 @@ def init_reify():
 
 def val_to_instrs(v) -> Optional[List[Instruction]]:
     # TODO: Definitely not fool-proof to get a code object
-    # code = compile(str(v), "", "eval")
     try:
         code = compile(str(v), "", "eval")
     except Exception as e:
@@ -71,7 +70,6 @@ def name_from_global(f: FunctionType, s: Mapping, name: str) -> Optional[object]
 
 def name_as_lv(s: Mapping, name: str) -> Optional[object]:
     lv = var(name)
-    # v = reify(lv, s)
     v = s.get(lv)
     if v != lv:
         logger.info("Found {} to be a logicvar with value {}".format(name, v))
@@ -85,9 +83,12 @@ def _reify_FunctionType(f: FunctionType, s: Mapping):
     c = f.__code__
     reifiable_names = c.co_names + c.co_freevars
     for global_name in reifiable_names:
-        if (v := name_from_global(f, s, name=global_name)) is not None:
+        v = name_from_global(f, s, name=global_name)
+        if v is not None:
             shadow_dict[global_name] = v
-        elif (v := name_as_lv(s, name=global_name)) is not None:
+            continue
+        v = name_as_lv(s, name=global_name)
+        if v is not None:
             shadow_dict[global_name] = v
 
     logger.info(
