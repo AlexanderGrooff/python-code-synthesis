@@ -9,25 +9,6 @@ from loguru import logger
 from unification import var
 
 
-def count_goals(goals):
-    num_goals = 0
-    for g in goals:
-        try:
-            num_children = len(g)
-            num_goals += count_goals(g)
-        except TypeError:
-            num_goals += 1
-    return num_goals
-
-
-def debugo(x):
-    def f(s):
-        print("Variable: {}, Substitute: {}".format(rec_ast_parse(x), rec_ast_parse(s)))
-        yield s
-
-    return f
-
-
 def rec_ast_parse(obj: Union[ast.AST, Iterable], unparse=True):
     if isinstance(obj, ast.AST):
         try:
@@ -125,10 +106,6 @@ def replace_ast_name_with_lvar(obj: ast.AST, replace_var: str) -> ast.AST:
     return new_obj
 
 
-def explode_function(f: FunctionType):
-    return {k: getattr(f.__code__, k) for k in dir(f.__code__) if k.startswith("co_")}
-
-
 def function_equality(f1: FunctionType, f2: FunctionType) -> bool:
     c_f1 = Code.from_pyfunc(f1)
     c_f2 = Code.from_pyfunc(f2)
@@ -149,3 +126,7 @@ def print_divider_block(s: str, block_char=None):
     logger.info(f"{block_char * block_width}")
     logger.info(f"{block_char} {s} {block_char}")
     logger.info(f"{block_char * block_width}")
+
+
+def module_to_expr(module: ast.Module) -> ast.AST:
+    return module.body[0].value

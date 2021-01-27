@@ -13,7 +13,6 @@ class TestEvalo(EvaloTestCase):
         for r in ret:
             self.assertEqual(self.evaluate_ast_expr(r), [])
 
-    # TODO: This returns Name(id='a', ctx=Load())
     def test_evaluate_assign_statement(self):
         ret, env = evalo(
             program=ast.parse("a = 1"),
@@ -27,7 +26,12 @@ class TestEvalo(EvaloTestCase):
 
     # TODO: This hangs
     # def test_no_results_are_given_if_constraints_are_impossible(self):
-    #     ret = evalo(program=ast.parse("123"), exprs=[ast.parse("x"), ast.parse("x")], values=[[], 3], replace_var='x')
+    #     ret = evalo(
+    #         program=ast.parse("123"),
+    #         exprs=[ast.parse("x"), ast.parse("x")],
+    #         values=[1, 3],
+    #         replace_var="x",
+    #     )
     #     self.assertEqual(ret, ())
 
     def test_program_with_lambda(self):

@@ -4,17 +4,15 @@ from types import FunctionType
 from typing import List, Union
 from uuid import uuid4
 
-from unification.core import isground
-
-from kanren.constraints import ConstrainedState, neq, isinstanceo
-from kanren.term import applyo
+from kanren.constraints import neq
 from loguru import logger
 from kanren import eq, var, unifiable, membero, conde
 
 from kanren.core import fail, run, lall
 from kanren.goals import heado, tailo, conso
-from unification import reify, Var, isvar
+from unification import Var, isvar
 
+from evalo.goals import typeo, binopo, callo
 from evalo.reify import init_reify
 from evalo.unify import init_unify
 from evalo.utils import (
@@ -23,6 +21,7 @@ from evalo.utils import (
     replace_ast_name_with_lvar,
     print_divider_block,
     sort_by_complexity,
+    module_to_expr,
 )
 
 DEFAULT_REPLACE_VAR = "x"
@@ -32,68 +31,6 @@ def init_evalo():
     unifiable(ast.AST)
     init_unify()
     init_reify()
-
-
-def typeo(v, t):
-    def typeo_goal(S: ConstrainedState):
-        nonlocal v, t
-
-        v_rf, t_rf = reify((v, t), S)
-        isground_all = [isground(reified_value, S) for reified_value in [v_rf, t_rf]]
-        if not all(isground_all):
-            if not isground(t_rf, S):
-                g = eq(type(v_rf), t_rf)
-                yield from g(S)
-            else:
-                # This doesn't put a value to v_rf, but constrains it to the given type
-                g = isinstanceo(v_rf, t_rf)
-                yield from g(S)
-        else:
-            if type(v_rf) == t_rf:
-                yield S
-
-    return typeo_goal
-
-
-def binopo(x, y, v, op):
-    def binopo_goal(S: ConstrainedState):
-        nonlocal x, y, v, op
-
-        uuid = str(uuid4())[:4]
-        t = var("type_" + uuid)
-        x_rf, y_rf, v_rf, op_rf = reify((x, y, v, op), S)
-        isground_all = [
-            isground(reified_value, S) for reified_value in [x_rf, y_rf, v_rf, op_rf]
-        ]
-        if not all(isground_all):
-            # We can only fix one LV at a time
-            if len([uv for uv in isground_all if uv is False]) == 1:
-                # TODO: Revop the other vars
-                if not isground(v_rf, S):
-                    try:
-                        g = lall(
-                            isinstanceo(x_rf, t),
-                            isinstanceo(y_rf, t),
-                            isinstanceo(v_rf, t),
-                            eq(op_rf(x_rf, y_rf), v_rf),
-                        )
-                    except Exception:
-                        return
-                    yield from g(S)
-        else:
-            # TODO: Why isnt this covered by the `typeo` goal?
-            try:
-                g = lall(
-                    isinstanceo(x_rf, t),
-                    isinstanceo(y_rf, t),
-                    isinstanceo(v_rf, t),
-                    eq(op_rf(x_rf, y_rf), v_rf),
-                )
-            except Exception as e:
-                return
-            yield from g(S)
-
-    return binopo_goal
 
 
 def evalo(
@@ -200,10 +137,6 @@ def eval_stmto(stmt, env, new_env, depth=0, maxdepth=3):
     return goals
 
 
-def module_to_expr(module: ast.Module) -> ast.AST:
-    return module.body[0].value
-
-
 def eval_expro(expr, env, value, depth=0, maxdepth=3):
     # logger.debug("Evaluating expr {} to {} with env {}".format(expr, value, env))
     uuid = str(uuid4())[:4]
@@ -257,35 +190,6 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
          callo(var('func_v_' + uuid), [], value)),
     )
     # fmt: on
-
-
-def callo(func, args, val):
-    def callo_goal(S: ConstrainedState):
-        nonlocal func, args, val
-
-        func_rf, args_rf, val_rf = reify((func, args, val), S)
-        isground_all = [
-            isground(reified_value, S) for reified_value in [func_rf, args_rf, val_rf]
-        ]
-        if not all(isground_all):
-            if len([v for v in isground_all if v is False]) == 1:
-                if isground(func_rf, S):
-                    if isinstance(func_rf, FunctionType):
-                        g = eq(func_rf(*args), val_rf)
-                        yield from g(S)
-                elif isground(val_rf, S):
-                    g = lall(
-                        applyo(func_rf, args, val),
-                        typeo(func_rf, FunctionType),
-                    )
-                    yield from g(S)
-                else:
-                    raise NotImplementedError("Can't handle args yet")
-        else:
-            if isinstance(func_rf, FunctionType) and func_rf(*args) == val:
-                yield S
-
-    return callo_goal
 
 
 def eval_argso(args_expr, env, value):
@@ -348,12 +252,6 @@ def eval_expr_listo(exprs: Union[List, Var], env, value, depth=0, maxdepth=3):
               conso(head_value, tail_value, value))))
     )
     # fmt: on
-
-
-def literal_lookup(name, env):
-    for k, v in env:
-        if name == k:
-            return v
 
 
 def lookupo(name, env, t, depth=0, maxdepth=100):

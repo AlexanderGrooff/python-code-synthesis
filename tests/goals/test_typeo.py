@@ -1,8 +1,8 @@
 from kanren import run, lall, eq
 
-from evalo.evalo import typeo
 from unification import var
 
+from evalo.goals import typeo
 from tests.helpers import EvaloTestCase
 
 

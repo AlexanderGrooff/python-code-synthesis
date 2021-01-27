@@ -8,8 +8,6 @@ from loguru import logger
 from unification import var
 from unification.core import construction_sentinel, _reify, reify
 
-from evalo.utils import explode_function
-
 
 def init_reify():
     _reify.add((FunctionType, Mapping), _reify_FunctionType)
