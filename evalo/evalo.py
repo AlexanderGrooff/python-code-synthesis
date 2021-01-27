@@ -77,12 +77,7 @@ def binopo(x, y, v, op):
                             isinstanceo(v_rf, t),
                             eq(op_rf(x_rf, y_rf), v_rf),
                         )
-                    except Exception as e:
-                        logger.debug(
-                            "Got exception during binop with args {}: {}".format(
-                                [x_rf, y_rf, v_rf, op_rf], e
-                            )
-                        )
+                    except Exception:
                         return
                     yield from g(S)
         else:
@@ -95,11 +90,6 @@ def binopo(x, y, v, op):
                     eq(op_rf(x_rf, y_rf), v_rf),
                 )
             except Exception as e:
-                logger.debug(
-                    "Got exception during ungrounded binop with args {}: {}".format(
-                        [x_rf, y_rf, v_rf, op_rf], e
-                    )
-                )
                 return
             yield from g(S)
 
@@ -227,8 +217,6 @@ def eval_expro(expr, env, value, depth=0, maxdepth=3):
 
     # Define function vars here so that they are easily reified with codetransformer
     body_v = var("body_v")  # TODO: Not so nice. This can overlap with other body_v's!
-    func_e = var("func_e")  # TODO: Not so nice. This can overlap with other body_v's!
-    func_v = var("func_v")  # TODO: Not so nice. This can overlap with other body_v's!
 
     # fmt: off
     return conde(
@@ -281,9 +269,6 @@ def callo(func, args, val):
         ]
         if not all(isground_all):
             if len([v for v in isground_all if v is False]) == 1:
-                logger.debug(
-                    f"Making function {func_rf} called with {args_rf} equal to {val_rf}"
-                )
                 if isground(func_rf, S):
                     if isinstance(func_rf, FunctionType):
                         g = eq(func_rf(*args), val_rf)
@@ -296,10 +281,6 @@ def callo(func, args, val):
                     yield from g(S)
                 else:
                     raise NotImplementedError("Can't handle args yet")
-            else:
-                logger.debug(
-                    f"Cannot reify call because both {func_rf} and {val_rf} are not ground"
-                )
         else:
             if isinstance(func_rf, FunctionType) and func_rf(*args) == val:
                 yield S
@@ -313,7 +294,10 @@ def eval_argso(args_expr, env, value):
     # fmt: off
     return conde(
         (conde(
+          # py38
           (eq(args_expr, ast.arguments(posonlyargs=[], args=args, vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[])),),
+          # py37
+          (eq(args_expr, ast.arguments(args=args, vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[])),),
           (eq(args_expr, []),)),
          eq(args, []),),
     )

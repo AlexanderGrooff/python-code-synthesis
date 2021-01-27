@@ -74,6 +74,46 @@ class TestExpressions(EvaloTestCase):
     def test_ast_lambda_without_args_results_in_function_type(self):
         ret, _ = self.run_expr(ast.Lambda(args=[], body=ast.Num(n=1)), var(), env=[])
         self.assertEqual(type(ret[0]), FunctionType)
+        self.assertFunctionEqual(ret[0], lambda: 1)
+
+    def test_ast_lambda_with_py37_args(self):
+        ret, _ = self.run_expr(
+            ast.Lambda(
+                args=ast.arguments(
+                    args=[],
+                    vararg=None,
+                    kwonlyargs=[],
+                    kw_defaults=[],
+                    kwarg=None,
+                    defaults=[],
+                ),
+                body=ast.Num(n=1),
+            ),
+            var(),
+            env=[],
+        )
+        self.assertEqual(type(ret[0]), FunctionType)
+        self.assertFunctionEqual(ret[0], lambda: 1)
+
+    def test_ast_lambda_with_py38_args(self):
+        ret, _ = self.run_expr(
+            ast.Lambda(
+                args=ast.arguments(
+                    posonlyargs=[],
+                    args=[],
+                    vararg=None,
+                    kwonlyargs=[],
+                    kw_defaults=[],
+                    kwarg=None,
+                    defaults=[],
+                ),
+                body=ast.Num(n=1),
+            ),
+            var(),
+            env=[],
+        )
+        self.assertEqual(type(ret[0]), FunctionType)
+        self.assertFunctionEqual(ret[0], lambda: 1)
 
     def test_ast_call_with_lambda_results_in_function_call(self):
         ret, _ = self.run_expr(

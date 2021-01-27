@@ -38,14 +38,10 @@ def replace_logicvar_with_val(f, logicvar_name, val):
                 yield loadlogicvar
                 return
             if loadlogicvar.arg == logicvar_name:
-                logger.info("Replacing {} with {}".format(loadlogicvar, val))
                 for instr in new_instrs:
                     yield instr.steal(loadlogicvar)
                 # yield instructions.LOAD_CONST(val).steal(loadlogicvar)
             else:
-                logger.info(
-                    f"Couldn't find {logicvar_name} in instruction {loadlogicvar}"
-                )
                 yield loadlogicvar
 
     transformer = ReplaceLogicVar()
@@ -62,7 +58,6 @@ def name_from_global(f: FunctionType, s: Mapping, name: str) -> Optional[object]
         #     logger.info("Tried reifying {} but {} is not a LV".format(name, logicvar))
         #     return
         reified_v = reify(logicvar, s)
-        logger.info("Reified {} to {}".format(logicvar, reified_v))
         return reified_v
     except (IndexError, KeyError):
         pass
@@ -72,13 +67,10 @@ def name_as_lv(s: Mapping, name: str) -> Optional[object]:
     lv = var(name)
     v = s.get(lv)
     if v != lv:
-        logger.info("Found {} to be a logicvar with value {}".format(name, v))
         return v
-    logger.info(f"{name} is not a mapped logicvar")
 
 
 def _reify_FunctionType(f: FunctionType, s: Mapping):
-    logger.info(f"Reifying function {f}")
     shadow_dict = {}
     c = f.__code__
     reifiable_names = c.co_names + c.co_freevars
@@ -91,17 +83,10 @@ def _reify_FunctionType(f: FunctionType, s: Mapping):
         if v is not None:
             shadow_dict[global_name] = v
 
-    logger.info(
-        "Reified all vars {} in function. Found shadowdict {}".format(
-            reifiable_names, shadow_dict
-        )
-    )
     if shadow_dict:
         for logicvar, val in shadow_dict.items():
-            logger.info(f"Starting replacement of {logicvar} with {val}")
             f = replace_logicvar_with_val(f, logicvar, val)
         new_c = Code.from_pyfunc(f)
-        logger.info(f"New instructions: {new_c.instrs}")
 
         yield construction_sentinel
         yield f
