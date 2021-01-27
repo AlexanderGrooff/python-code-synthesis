@@ -1,4 +1,4 @@
-from kanren import run
+from kanren import run, lall, eq
 
 from evalo.evalo import typeo
 from unification import var
@@ -30,3 +30,15 @@ class TestTypeo(EvaloTestCase):
         goals = typeo([1, 2, 3], x)
         ret = run(1, x, goals)
         self.assertEqual(ret[0], list)
+
+    def test_typeo_prevents_value_from_being_other_type(self):
+        x = var()
+        goals = lall(typeo(x, str), eq(x, 123))
+        ret = run(1, x, goals)
+        self.assertEqual(ret, ())
+
+    def test_typeo_ensures_type(self):
+        x = var()
+        goals = lall(typeo(x, int), eq(x, 123))
+        ret = run(1, x, goals)
+        self.assertEqual(ret, (123,))

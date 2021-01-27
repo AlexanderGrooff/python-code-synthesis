@@ -44,9 +44,10 @@ def typeo(v, t):
             if not isground(t_rf, S):
                 g = eq(type(v_rf), t_rf)
                 yield from g(S)
-            # TODO: What if v_rf is not yet grounded?
             else:
-                yield S
+                # This doesn't put a value to v_rf, but constrains it to the given type
+                g = isinstanceo(v_rf, t_rf)
+                yield from g(S)
         else:
             if type(v_rf) == t_rf:
                 yield S
